@@ -2,19 +2,9 @@ import { Form, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/account";
 import { useRenewedActionId } from "~/lib/action-id.ts";
 import { guarded, formString, type ActionResult } from "~/lib/action-result.ts";
-import { ApiError } from "~/lib/api.ts";
-import { addMyAddress, createSession, getMe, registerShopper } from "~/lib/queries.ts";
+import { currentShopper } from "~/lib/shopper.ts";
+import { addMyAddress, createSession, registerShopper } from "~/lib/queries.ts";
 import type { Shopper } from "~/lib/types.ts";
-
-/** The signed-in shopper, or null when the cookie holds none (422 session-required). */
-export async function currentShopper(): Promise<Shopper | null> {
-  try {
-    return await getMe();
-  } catch (e) {
-    if (e instanceof ApiError && (e.status === 422 || e.status === 404)) return null;
-    throw e;
-  }
-}
 
 export async function clientLoader() {
   return { shopper: await currentShopper() };

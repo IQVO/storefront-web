@@ -11,7 +11,7 @@ import { formatMinor } from "~/lib/money.ts";
 import { isScenario, tokenFor, type ScenarioId } from "~/lib/payment.ts";
 import { confirmCheckout, getCheckout, openCheckout } from "~/lib/queries.ts";
 import type { CheckoutSession } from "~/lib/types.ts";
-import { currentShopper } from "./account.tsx";
+import { currentShopper } from "~/lib/shopper.ts";
 
 const SESSION_KEY = "sf.checkoutId";
 const rememberedSession = () => (typeof sessionStorage === "undefined" ? null : sessionStorage.getItem(SESSION_KEY));
