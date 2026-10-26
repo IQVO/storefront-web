@@ -1,0 +1,9 @@
+node_modules/
+build/
+.react-router/
+coverage/
+.lighthouseci/
+playwright-report/
+test-results/
+.claude/settings.local.json
+.DS_Store
