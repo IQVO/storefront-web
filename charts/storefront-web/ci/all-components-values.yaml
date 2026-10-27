@@ -1,0 +1,19 @@
+# Used by `helm lint` / `ct lint`: every optional value set at once. Dummy
+# BFF origin; nothing here is ever dialled.
+replicaCount: 2
+config:
+  bffUrl: "http://storefront-bff.example.invalid"
+  port: 3000
+  cookieSecure: "true"
+image:
+  pullPolicy: Always
+serviceAccount:
+  annotations:
+    example.invalid/role: "storefront-web"
+podAnnotations:
+  example.invalid/scrape: "true"
+podLabels:
+  example.invalid/track: "storefront"
+extraEnv:
+  - name: EXTRA_EXAMPLE
+    value: "1"

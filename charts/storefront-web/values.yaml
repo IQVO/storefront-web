@@ -1,0 +1,97 @@
+# Default values for storefront-web. One component: the web Deployment
+# (server/index.ts: the Node SSR server, static assets and the /api/storefront
+# proxy in one process, port 3000). The chart refuses to render without the
+# mandatory value named in the failure: config.bffUrl.
+
+replicaCount: 1
+
+# The image is built from this repository's root Dockerfile (USER node,
+# port 3000, root filesystem never written).
+image:
+  repository: warehouse/storefront-web
+  pullPolicy: IfNotPresent
+  # Empty = "v" + the chart's appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# The image runs as the node user (uid/gid 1000, Dockerfile USER node).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Environment read by server/index.ts and app/lib/api.server.ts. Every key
+# maps 1:1 to one variable; nothing else is rendered.
+config:
+  # BFF_URL: server-side origin of the storefront-bff, the ONLY backend. The
+  # SSR loaders call it and the server proxies /api/storefront to it; it never
+  # reaches the client bundle. REQUIRED.
+  # In-cluster: http://storefront-bff.warehouse-systems.svc.cluster.local:8080
+  bffUrl: ""
+  port: 3000                        # PORT (must equal service.targetPort)
+  # COOKIE_SECURE: "true" marks the state cookie Secure (serve over HTTPS).
+  cookieSecure: "false"
+
+# Extra env vars appended to the web container as a raw list. The chart
+# refuses STOREFRONT_STUB (the in-memory stub BFF is for local CI/demos only,
+# never a deployed runtime) and any variable the chart renders itself.
+extraEnv: []
+
+# The Node server serves /healthz and /readyz itself (both answer 200 once the
+# listener is up; neither checks the BFF). Boot is fast, so no startup probe.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 3
+  periodSeconds: 5
+
+# SIGTERM closes the listener and drains in-flight requests (server/index.ts).
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
