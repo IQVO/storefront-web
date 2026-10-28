@@ -11,6 +11,14 @@ scenario token), and invents no ids.
 
 This project is a domain-driven design study. It is not associated with, endorsed by or affiliated with any company, and it uses no company's code, data, logos or trademarks. All names, figures and examples are illustrative or synthetic.
 
+## Documentation
+
+This storefront front end is documented as part of the warehouse-docs
+storefront section — the storefront domain pages and the model that is the
+single source of truth live at
+<https://iqvo.github.io/warehouse-docs/storefront/>. Decisions for this repo
+live in docs/adr/ (5 ADRs).
+
 ## Stack
 
 React 19, Vite 7, React Router 7 framework mode (SSR on Node), TypeScript strict, vitest + Testing Library,
@@ -97,14 +105,35 @@ First Playwright use: `npx playwright install chromium`. Lighthouse needs Chrome
 | `lighthouse-budgets` | LCP <= 2.5 s, TBT <= 200 ms (INP proxy), CLS <= 0.1 on home, search, product page, cart (mobile and desktop) |
 | `e2e` | Playwright journeys: browse to confirmation, declined and in-doubt payment, orders to cancel, CSP |
 | `guide-lint` | agent-harness guides, repo lint and hook tests |
+| `helm-lint` | `ct lint --charts charts/storefront-web` against the chart's `ci/` values files, plus `helm lint` |
+| `chart-tests` | chart render assertions (`render_test.sh`, `test_service_selectors.py`) |
 | `docker-build` | the image builds (and re-runs the bundle sensor inside the build) |
 
 ## Security
 
 Strict, nonce-based CSP on every HTML response (ADR 0003): no inline script or style, `connect-src 'self'`.
 
+## Helm chart
+
+`charts/storefront-web` is a minimal chart for the web Deployment: one
+process (the Node SSR server, static assets and the `/api/storefront` proxy,
+port 3000), one replica, running as the node user (uid/gid 1000, read-only
+root filesystem). It refuses to render without the mandatory `config.bffUrl`
+value — the BFF origin is deployment configuration, never part of the client
+bundle. The image is built from the root Dockerfile (`warehouse/storefront-web`).
+
 ## Agent harness
 
 Instantiated with the agent-runtime harness of `warehouse-harness-template` (`harness-template: v4`): hooks,
 scoped rules in `.claude/rules`, skills in `.claude/skills`, review subagents, memory, `guide-lint` and `repo_lint`.
 See `HARNESS.md`.
+
+## Architecture Decision Records
+
+Five ADRs live in [`docs/adr/`](docs/adr/):
+
+- [0001 — React Router 7 framework SSR](docs/adr/0001-react-router-7-framework-ssr.md)
+- [0002 — BFF-only API access and the state cookie](docs/adr/0002-bff-only-and-state-cookie.md)
+- [0003 — strict, nonce-based CSP](docs/adr/0003-strict-csp.md)
+- [0004 — simulated payment fields](docs/adr/0004-simulated-payment-fields.md)
+- [0005 — CI sensors and the stub BFF](docs/adr/0005-ci-sensors-and-stub-bff.md)
