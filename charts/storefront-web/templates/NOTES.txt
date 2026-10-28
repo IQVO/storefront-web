@@ -1,0 +1,15 @@
+{{ .Chart.Name }} has been deployed.
+
+Release:   {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+Service:   {{ include "storefront-web.fullname" . }} ({{ .Values.service.type }}, port {{ .Values.service.port }})
+
+To reach it locally:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "storefront-web.fullname" . }} 3000:{{ .Values.service.port }}
+  curl http://localhost:3000/healthz
+
+The web gateway routes / to this service and /api/storefront to the
+storefront-bff. The SSR loaders and the in-server /api/storefront proxy reach
+the BFF server-side at {{ .Values.config.bffUrl }}; that origin never reaches
+the client bundle.

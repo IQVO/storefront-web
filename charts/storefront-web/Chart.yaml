@@ -1,0 +1,12 @@
+apiVersion: v2
+name: storefront-web
+description: Storefront Web - the React server-side-rendered storefront of the retail-network storefront domain (home, search, product, cart, checkout, orders); its only backend is the storefront-bff
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/IQVO/storefront-web
+keywords:
+  - ddd
+  - retail-network
+  - react
+  - ssr
