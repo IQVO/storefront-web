@@ -11,6 +11,14 @@ scenario token), and invents no ids.
 
 This project is a domain-driven design study. It is not associated with, endorsed by or affiliated with any company, and it uses no company's code, data, logos or trademarks. All names, figures and examples are illustrative or synthetic.
 
+## Documentation
+
+This storefront front end is documented as part of the warehouse-docs
+storefront section — the storefront domain pages and the model that is the
+single source of truth live at
+<https://iqvo.github.io/warehouse-docs/storefront/>. Decisions for this repo
+live in docs/adr/ (5 ADRs).
+
 ## Stack
 
 React 19, Vite 7, React Router 7 framework mode (SSR on Node), TypeScript strict, vitest + Testing Library,
