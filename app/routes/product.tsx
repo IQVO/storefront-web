@@ -20,8 +20,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   }
 }
 
-export function meta({ data }: Route.MetaArgs) {
-  return [{ title: data?.product.title ?? "Product" }];
+export function meta({ loaderData }: Route.MetaArgs) {
+  return [{ title: loaderData?.product.title ?? "Product" }];
 }
 
 export default function Product({ loaderData }: Route.ComponentProps) {

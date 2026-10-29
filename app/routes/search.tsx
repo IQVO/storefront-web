@@ -32,8 +32,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { params, result };
 }
 
-export function meta({ data }: Route.MetaArgs) {
-  return [{ title: data?.params.q ? `Search: ${data.params.q}` : "Browse products" }];
+export function meta({ loaderData }: Route.MetaArgs) {
+  return [{ title: loaderData?.params.q ? `Search: ${loaderData.params.q}` : "Browse products" }];
 }
 
 export default function Search({ loaderData }: Route.ComponentProps) {
