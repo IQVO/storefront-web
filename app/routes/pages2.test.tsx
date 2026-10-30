@@ -181,7 +181,7 @@ describe("page components", () => {
 describe("product page", () => {
   const product = {
     catalogItemId: "i1", title: "Kettle", effectivePrice: { amountMinor: 3000, currency: "USD" }, listPrice: { amountMinor: 3500, currency: "USD" }, inStock: true, purchasable: true,
-    bullets: ["Fast"], attributes: [{ name: "Colour", value: "Clear" }], description: "A kettle.", categoryId: "cat-k-s", categoryPath: ["Kitchen & Dining", "Small Appliances"],
+    bullets: ["Fast"], attributes: [{ name: "Colour", value: "Clear" }, { name: "Length", value: "26.0", unit: "cm" }], description: "A kettle.", categoryId: "cat-k-s", categoryPath: ["Kitchen & Dining", "Small Appliances"],
     media: [{ mediaId: "m", url: "http://storefront.localhost/media/departments/kitchen-dining.svg", altText: "Kettle picture", role: "PRIMARY" }],
   };
   it("renders the three columns and adds to the cart with an action id", async () => {
@@ -192,6 +192,8 @@ describe("product page", () => {
     expect(screen.getByAltText("Kettle picture")).toHaveAttribute("src", "/media/departments/kitchen-dining.svg");
     expect(screen.getByRole("heading", { name: "About this item" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Product information" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "Length 26.0 cm" })).toBeInTheDocument();
+    expect(screen.getByRole("row", { name: "Colour Clear" })).toBeInTheDocument();
     expect(screen.getByText("$35.00")).toBeInTheDocument();
     expect(screen.getByText("In Stock")).toBeInTheDocument();
     expect(screen.getByText("Austin, TX")).toBeInTheDocument();
