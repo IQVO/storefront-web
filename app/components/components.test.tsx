@@ -53,6 +53,7 @@ describe("ProblemAlert", () => {
     expect(problemMessage(p(422, "session-required"))).toMatch(/sign in/);
     expect(problemMessage(p(409, "cancel-after-lock"))).toMatch(/no longer be cancelled/);
     expect(problemMessage(p(402, "payment-declined"))).toMatch(/declined/);
+    expect(problemMessage(p(409, "stale-delivery-selection"))).toMatch(/choose your delivery option again/);
     expect(problemMessage(new ApiError(503, null))).toMatch(/temporarily unavailable/);
     expect(problemMessage(p(409, "other"))).toBe("D");
     expect(problemMessage(new Error("boom"))).toMatch(/Something went wrong/);

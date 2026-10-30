@@ -1,3 +1,4 @@
+import { promiseDate } from "./dates.ts";
 import type { DeliveryTier, Tier } from "./types.ts";
 
 export const TIER_LABEL: Record<Tier, string> = {
@@ -45,7 +46,13 @@ export function pickPromise(tiers: DeliveryTier[], orderMinor: number, currency 
   const byArrival = (a: PromiseOption, b: PromiseOption) => a.latest.localeCompare(b.latest) || a.earliest.localeCompare(b.earliest);
   const main = [...opts].sort((a, b) => cost(a) - cost(b) || byArrival(a, b))[0] as PromiseOption;
   const fastest = [...opts].sort(byArrival)[0] as PromiseOption;
-  return { main, fastest: fastest.tier === main.tier ? null : fastest };
+  // A faster tier that lands on the same promised day(s) adds nothing for the shopper.
+  const sameDays = sameWindow(fastest, main);
+  return { main, fastest: fastest.tier === main.tier || sameDays ? null : fastest };
+}
+
+function sameWindow(a: PromiseOption, b: PromiseOption): boolean {
+  return promiseDate(a.earliest, a.latest) === promiseDate(b.earliest, b.latest);
 }
 
 /** "FREE" or "$4.99"; null when the charge is unknown. */

@@ -107,7 +107,7 @@ function LineRow({ cart, itemId, quantity, product }: { cart: Cart; itemId: stri
   );
 }
 
-function DestinationForm({ cart }: { cart: Cart }) {
+function DestinationForm({ cart, disabled }: { cart: Cart; disabled: boolean }) {
   const { destination, setZip } = useSession();
   const dest = useCartAction(cart);
   const [zip, setZipInput] = useState(destination?.zip ?? "");
@@ -124,7 +124,7 @@ function DestinationForm({ cart }: { cart: Cart }) {
       <label htmlFor="cart-zip">Deliver to ZIP code</label>
       <div className="zip-row">
         <input id="cart-zip" name="zip" value={zip} onChange={(e) => setZipInput(e.target.value)} maxLength={10} autoComplete="postal-code" required placeholder="e.g. 78701" />
-        <button type="submit" className="btn btn-secondary" disabled={dest.busy}>{dest.busy ? "Updating…" : "Update"}</button>
+        <button type="submit" className="btn btn-secondary" disabled={dest.busy || disabled}>{dest.busy ? "Updating…" : "Update"}</button>
       </div>
       {showing && <p className="muted small">Delivering to ZIP {showing}</p>}
       {dest.error && <p className="alert" role="alert">{dest.error}</p>}
@@ -154,13 +154,13 @@ function useAutoQuote(cart: Cart) {
   return auto;
 }
 
-function GroupOptions({ cart, groupNo, total, offers, selected, schedule }: { cart: Cart; groupNo: number; total: number; offers: NonNullable<Cart["deliveryQuote"]>["groups"][number]["offers"]; selected: string | undefined; schedule: DeliveryDates | null }) {
+function GroupOptions({ cart, groupNo, total, offers, selected, schedule, disabled }: { cart: Cart; groupNo: number; total: number; offers: NonNullable<Cart["deliveryQuote"]>["groups"][number]["offers"]; selected: string | undefined; schedule: DeliveryDates | null; disabled: boolean }) {
   const pick = useCartAction(cart);
   const itemsMinor = cart.estimate?.itemsMinor ?? 0;
   const currency = cart.estimate?.currency ?? "USD";
   return (
     // Native radios (re-mounted per cart version): the choice shows at once while it is saved and the cart reloads.
-    <fieldset className="delivery-group" key={`${cart.cartId}-${cart.version}`}>
+    <fieldset className="delivery-group" key={`${cart.cartId}-${cart.version}`} disabled={disabled}>
       <legend>{total > 1 ? `Shipment ${groupNo} of ${total}` : "Choose your delivery option"}</legend>
       <div className="radio-cards">
         {offers.map((o) => {
@@ -185,6 +185,8 @@ function GroupOptions({ cart, groupNo, total, offers, selected, schedule }: { ca
 function DeliveryOptions({ cart, schedule }: { cart: Cart; schedule: DeliveryDates | null }) {
   const auto = useAutoQuote(cart);
   const { destination } = useSession();
+  // While a destination or quote is in flight the offers are about to be replaced: choosing one now would be stale.
+  const requoting = useFetchers().some((f) => f.state !== "idle" && ["set-destination", "quote"].includes(String(f.formData?.get("intent") ?? "")));
   const quote = cart.deliveryQuote;
   const groups = quote?.groups ?? [];
   const selected = new Map((cart.selections ?? []).map((s) => [s.groupNo, s.offerId]));
@@ -193,8 +195,8 @@ function DeliveryOptions({ cart, schedule }: { cart: Cart; schedule: DeliveryDat
   return (
     <section className="cart-delivery" aria-labelledby="deliv-h">
       <h2 id="deliv-h">Choose your delivery options</h2>
-      <DestinationForm cart={cart} />
-      {auto.busy && <p className="muted" role="status">Getting delivery options…</p>}
+      <DestinationForm cart={cart} disabled={requoting} />
+      {(auto.busy || requoting) && <p className="muted" role="status">Getting delivery options…</p>}
       {auto.error && <p className="alert" role="alert">{auto.error}</p>}
       {cart.destinationPostalPrefix && !quote && !auto.busy && <QuoteButton cart={cart} />}
       {notServed && (
@@ -205,7 +207,7 @@ function DeliveryOptions({ cart, schedule }: { cart: Cart; schedule: DeliveryDat
         </p>
       )}
       {groups.map((g) => (
-        <GroupOptions key={g.groupNo} cart={cart} groupNo={g.groupNo} total={groups.length} offers={g.offers} selected={selected.get(g.groupNo)} schedule={schedule} />
+        <GroupOptions key={g.groupNo} cart={cart} groupNo={g.groupNo} total={groups.length} offers={g.offers} selected={selected.get(g.groupNo)} schedule={schedule} disabled={requoting} />
       ))}
       {groups.length > 0 && <p className="muted small">Delivery dates are the delivery network&apos;s promise for your ZIP code.</p>}
     </section>

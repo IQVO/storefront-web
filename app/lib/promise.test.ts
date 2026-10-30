@@ -25,6 +25,11 @@ describe("delivery promise selection", () => {
     expect(p?.fastest).toBeNull();
     expect(pickPromise([], 1)).toBeNull();
   });
+  it("omits a faster tier that lands on the same promised day", () => {
+    const sameDayStd: DeliveryTier = { ...std, deliverByEarliest: "2026-10-31T20:00:00Z", deliverByLatest: "2026-10-31T23:00:00Z" };
+    const sameDayTwo: DeliveryTier = { ...two, deliverByEarliest: "2026-10-31T18:00:00Z", deliverByLatest: "2026-10-31T19:00:00Z" };
+    expect(pickPromise([sameDayTwo, sameDayStd], 3999)).toMatchObject({ main: { tier: "STANDARD" }, fastest: null });
+  });
   it("labels tiers and charges", () => {
     expect(tierLabel("NEXT_DAY")).toBe("Next-Day Delivery");
     expect(tierLabel("OTHER")).toBe("OTHER");

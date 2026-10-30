@@ -7,7 +7,9 @@ import { expect, type Page } from "@playwright/test";
 export async function seePromise(page: Page, zip: string) {
   const box = page.getByRole("complementary", { name: "Buy box" });
   const field = box.getByLabel(/Enter your ZIP code/);
-  if (await field.isVisible().catch(() => false)) {
+  // The ZIP field shows only while no destination is known (sf_dest cookie or a saved address).
+  const asked = await field.waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false);
+  if (asked) {
     await field.fill(zip);
     await box.getByRole("button", { name: "Apply" }).click();
   }
@@ -25,7 +27,8 @@ export async function addToCart(page: Page) {
 export async function chooseDelivery(page: Page, zip: string) {
   await expect(page.getByRole("heading", { name: "Shopping Cart" })).toBeVisible();
   const radios = page.getByRole("radio");
-  if (!(await radios.first().isVisible({ timeout: 8_000 }).catch(() => false))) {
+  const quoted = await radios.first().waitFor({ state: "visible", timeout: 10_000 }).then(() => true, () => false);
+  if (!quoted) {
     await page.getByLabel("Deliver to ZIP code").fill(zip);
     await page.getByRole("button", { name: "Update" }).click();
   }
