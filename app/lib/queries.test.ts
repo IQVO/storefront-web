@@ -16,15 +16,17 @@ const last = () => {
 describe("BFF operations hit only /api/storefront with the documented verbs", () => {
   const cases: [string, () => Promise<unknown>, string, string, unknown?][] = [
     ["searchProducts", () => q.searchProducts({ q: "mug", limit: 5 }), "GET", "/api/storefront/products?q=mug&limit=5"],
+    ["searchProducts by category", () => q.searchProducts({ categoryId: "cat-1" }), "GET", "/api/storefront/products?categoryId=cat-1"],
     ["getProduct", () => q.getProduct("a/b"), "GET", "/api/storefront/products/a%2Fb"],
-    ["quoteDeliveryDates", () => q.quoteDeliveryDates("p1", "10001"), "POST", "/api/storefront/products/p1:delivery-dates", { postalPrefix: "10001" }],
+    ["listCategories", () => q.listCategories(), "GET", "/api/storefront/categories"],
+    ["quoteDeliveryDates", () => q.quoteDeliveryDates("p1", "787"), "POST", "/api/storefront/products/p1:delivery-dates", { postalPrefix: "787" }],
     ["createCart", () => q.createCart("act"), "POST", "/api/storefront/carts"],
     ["listCarts", () => q.listCarts(), "GET", "/api/storefront/carts?state=OPEN"],
     ["getCart", () => q.getCart("c1"), "GET", "/api/storefront/carts/c1"],
     ["addCartLine", () => q.addCartLine("c1", "i1", 2), "POST", "/api/storefront/carts/c1/lines", { catalogItemId: "i1", quantity: 2 }],
     ["setLineQuantity", () => q.setLineQuantity("c1", "i1", 3), "PATCH", "/api/storefront/carts/c1/lines/i1", { quantity: 3 }],
     ["removeLine", () => q.removeLine("c1", "i1"), "DELETE", "/api/storefront/carts/c1/lines/i1"],
-    ["setDestination", () => q.setDestination("c1", "10001"), "POST", "/api/storefront/carts/c1/destination", { postalPrefix: "10001" }],
+    ["setDestination", () => q.setDestination("c1", "787"), "POST", "/api/storefront/carts/c1/destination", { destinationPostalPrefix: "787" }],
     ["quoteCartDelivery", () => q.quoteCartDelivery("c1"), "POST", "/api/storefront/carts/c1/delivery:quote"],
     ["selectCartDelivery", () => q.selectCartDelivery("c1", 1, "o1"), "POST", "/api/storefront/carts/c1/delivery:select", { groupNo: 1, offerId: "o1" }],
     ["openCheckout", () => q.openCheckout("addr-1"), "POST", "/api/storefront/checkout", { shipToAddressId: "addr-1" }],
@@ -44,6 +46,12 @@ describe("BFF operations hit only /api/storefront with the documented verbs", ()
     expect(c.method).toBe(method);
     expect(c.url).toBe(url);
     if (body) expect(JSON.parse(c.body ?? "null")).toEqual(body);
+  });
+
+  it("sends the cart destination as exactly {destinationPostalPrefix}: shopping-cart's strict decoder rejects postalPrefix", async () => {
+    await q.setDestination("c1", "787", "act-9");
+    expect(Object.keys(JSON.parse(last().body ?? "{}"))).toEqual(["destinationPostalPrefix"]);
+    expect(last().headers["X-Action-Id"]).toBe("act-9");
   });
 
   it("passes the optional cartId and action ids through", async () => {

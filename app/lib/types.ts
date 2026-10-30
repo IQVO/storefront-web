@@ -20,9 +20,24 @@ export interface ProductHit {
   title: string;
   effectivePrice?: Money;
   primaryMedia?: Media;
+  categoryId?: string;
+  /** Category NAMES from the root to the item's primary category. */
   categoryPath?: string[];
   inStock: boolean;
   purchasable: boolean;
+}
+
+/** One node of product-discovery's category tree (BFF GET /categories). */
+export interface Category {
+  categoryId: string;
+  parentId?: string | null;
+  name: string;
+  path: string;
+  purchasableCount: number;
+}
+export interface CategoryList {
+  version: number;
+  categories: Category[];
 }
 
 export interface FacetValue {
@@ -52,6 +67,7 @@ export interface ProductView {
   bullets?: string[];
   attributes?: { name: string; value: string }[];
   media?: Media[];
+  categoryId?: string;
   categoryPath?: string[];
   listPrice?: Money;
   effectivePrice?: Money;
@@ -70,7 +86,13 @@ export interface DeliveryTier {
 export interface DeliveryDates {
   postalPrefix: string;
   tiers: DeliveryTier[];
-  unavailable: unknown[];
+  unavailable: TierUnavailable[];
+}
+
+export interface TierUnavailable {
+  tier: Tier;
+  constraint: string;
+  groupNo?: number;
 }
 
 export interface CartLine {
@@ -103,7 +125,7 @@ export interface Cart {
   state: string;
   lines: CartLine[];
   destinationPostalPrefix?: string | null;
-  deliveryQuote?: { groups: QuoteGroup[]; unavailableTiers: Tier[]; quotedAt: string };
+  deliveryQuote?: { groups: QuoteGroup[]; unavailableTiers: Tier[]; unavailable?: TierUnavailable[]; quotedAt: string };
   selections?: { groupNo: number; offerId: string }[];
   estimate?: Estimate;
   checkoutReadiness?: { ready: boolean; allGroupsSelected: boolean; noOfferExpired: boolean };
@@ -171,6 +193,17 @@ export interface TrackingGroup {
   cancelRefusedReason?: string;
   packages: TrackingPackage[];
 }
+/** customer-ordering's promise for one shipment group of a placed order. */
+export interface GroupPromise {
+  groupNo: number;
+  promiseId?: string;
+  tier: Tier;
+  shipBy?: string;
+  deliverByEarliest: string;
+  deliverByLatest: string;
+  lineNos: number[];
+  status: string;
+}
 export interface Order {
   orderId: string;
   shopperId: string;
@@ -179,7 +212,7 @@ export interface Order {
   placedAt: string;
   cancelledAt?: string;
   lines: { lineNo: number; catalogItemId: string; quantity: number }[];
-  groups: unknown[];
+  groups: GroupPromise[];
   tracking?: { orderId: string; status: string; groups: TrackingGroup[] };
   totals?: { currency?: string; totalMinor?: number };
 }
