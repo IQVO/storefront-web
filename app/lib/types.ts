@@ -65,7 +65,7 @@ export interface ProductView {
   title: string;
   description?: string;
   bullets?: string[];
-  attributes?: { name: string; value: string }[];
+  attributes?: { name: string; value: string; unit?: string | null }[];
   media?: Media[];
   categoryId?: string;
   categoryPath?: string[];

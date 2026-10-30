@@ -102,7 +102,7 @@ export default function Product({ loaderData }: Route.ComponentProps) {
               <table className="attr-table">
                 <tbody>
                   {product.attributes.map((a) => (
-                    <tr key={a.name}><th scope="row">{a.name}</th><td>{a.value}</td></tr>
+                    <tr key={a.name}><th scope="row">{a.name}</th><td>{a.unit ? `${a.value} ${a.unit}` : a.value}</td></tr>
                   ))}
                 </tbody>
               </table>
