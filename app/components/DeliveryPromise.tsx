@@ -74,7 +74,7 @@ export function DeliveryPromise({ productId, orderMinor, currency }: { productId
 
 function Line({ lead, o }: { lead: "main" | "fastest"; o: PromiseOption }) {
   const charge = chargeText(o, formatMinor);
-  const when = promiseDate(o.earliest, o.latest);
+  const when = promiseDate(o.earliest, o.latest, o.timeZone);
   return (
     <p className={`promise-line promise-${lead}`} data-testid={`promise-${lead}`}>
       {lead === "main" ? (
@@ -87,7 +87,7 @@ function Line({ lead, o }: { lead: "main" | "fastest"; o: PromiseOption }) {
         </>
       )}
       <span className="promise-sub">
-        {tierLabel(o.tier)} · {arriving(o.earliest, o.latest)}
+        {tierLabel(o.tier)} · {arriving(o.earliest, o.latest, o.timeZone)}
       </span>
     </p>
   );

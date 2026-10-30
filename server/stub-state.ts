@@ -33,7 +33,7 @@ export interface StubOrder {
   placedAt: string;
   postal: string;
   lines: { lineNo: number; catalogItemId: string; quantity: number }[];
-  groups: { groupNo: number; tier: string; deliverByEarliest: string; deliverByLatest: string; lineNos: number[] }[];
+  groups: { groupNo: number; tier: string; deliverByEarliest: string; deliverByLatest: string; timeZone?: string; lineNos: number[] }[];
   totalMinor: number;
   cancelledAt?: string;
 }

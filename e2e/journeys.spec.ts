@@ -27,6 +27,8 @@ test("browse -> product promise -> cart -> checkout -> confirmation", async ({ p
   const promise = await seePromise(page, "78701");
   await expect(promise).toContainText("FREE delivery");
   await expect(page.getByTestId("promise-fastest")).toContainText("Or fastest delivery");
+  // A one-day window is read on the destination's calendar (the stub sends America/Chicago) and shows its hours.
+  await expect(page.getByTestId("promise-fastest")).toContainText(/Arriving \w+day, \w{3} \d{1,2}, [89] AM – [89] PM/);
   await expect(page.getByRole("complementary", { name: "Buy box" }).getByText("Deliver to 78701")).toBeVisible();
 
   await addToCart(page);
