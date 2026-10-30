@@ -43,7 +43,7 @@ export default function Orders({ loaderData }: Route.ComponentProps) {
             return (
               <li key={o.orderId} className="order-card">
                 <dl className="order-card-head">
-                  <div><dt>Order placed</dt><dd>{formatPlaced(o.placedAt)}</dd></div>
+                  <div><dt>Order placed</dt><dd>{formatPlaced(o.placedAt, o.groups[0]?.timeZone)}</dd></div>
                   {o.totals?.totalMinor !== undefined && o.totals.currency && <div><dt>Total</dt><dd>{formatMinor(o.totals.totalMinor, o.totals.currency)}</dd></div>}
                   <div><dt>Ship to ZIP</dt><dd>{o.destinationPostalPrefix}xx</dd></div>
                   <div className="order-no"><dt>Order #</dt><dd><Link to={`/orders/${encodeURIComponent(o.orderId)}`}>{o.orderId}</Link></dd></div>
@@ -52,7 +52,7 @@ export default function Orders({ loaderData }: Route.ComponentProps) {
                   <p className="order-status-line"><strong>{statusLabel(o.status)}</strong> · {units} {units === 1 ? "item" : "items"}</p>
                   {o.groups.map((g) => (
                     <p key={g.groupNo} className="order-arriving">
-                      <strong>{arriving(g.deliverByEarliest, g.deliverByLatest)}</strong> <span className="muted small">{tierLabel(g.tier)}</span>
+                      <strong>{arriving(g.deliverByEarliest, g.deliverByLatest, g.timeZone)}</strong> <span className="muted small">{tierLabel(g.tier)}</span>
                     </p>
                   ))}
                   <Link to={`/orders/${encodeURIComponent(o.orderId)}`} className="btn btn-secondary btn-sm">View order details</Link>

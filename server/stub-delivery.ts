@@ -15,6 +15,8 @@ const OFFERED: Terms[] = [
 ];
 
 const DAY = 86_400_000;
+/** The served areas' IANA zone, sent with every promise window as delivery-promise does (ADR 0006). */
+export const DESTINATION_TIME_ZONE = "America/Chicago";
 /** A calendar day `days` after `now`, at 18:00 UTC (mid-day in the Texas service area). */
 const instant = (now: number, days: number) => {
   const d = new Date(now + days * DAY);
@@ -23,16 +25,28 @@ const instant = (now: number, days: number) => {
 };
 const day = (now: number, days: number) => instant(now, days).slice(0, 10);
 
+/**
+ * The real promise's instants for a local delivery day "YYYY-MM-DD" in the service area: from 14:00Z that day to
+ * 02:00Z the next (9 AM – 9 PM in summer, 8 AM – 8 PM in winter, one local day either way).
+ */
+export const windowStart = (date: string): string => `${date}T14:00:00Z`;
+export const windowEnd = (date: string): string => {
+  const d = new Date(`${date}T02:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().replace(".000Z", "Z");
+};
+
 export const isServed = (prefix: string): boolean => SERVED_PREFIXES.has(prefix);
 
 export const notServed = () => TIERS.map((tier) => ({ tier, constraint: "DESTINATION_NOT_SERVED" }));
 
-/** POST /products/{id}:delivery-dates tiers: instants, charges and free-over thresholds. */
+/** POST /products/{id}:delivery-dates tiers: instants in the destination's zone, charges and free-over thresholds. */
 export function productTiers(now: number) {
   return OFFERED.map((t) => ({
     tier: t.tier,
-    deliverByEarliest: instant(now, t.fromDays),
-    deliverByLatest: instant(now, t.toDays),
+    deliverByEarliest: windowStart(day(now, t.fromDays)),
+    deliverByLatest: windowEnd(day(now, t.toDays)),
+    timeZone: DESTINATION_TIME_ZONE,
     offerExpiresAt: new Date(now + 15 * 60_000).toISOString(),
     charge: { amountMinor: t.chargeMinor, currency: "USD" },
     ...(t.freeOverMinor !== undefined ? { freeOver: { amountMinor: t.freeOverMinor, currency: "USD" } } : {}),
