@@ -1,6 +1,7 @@
 import { byId } from "./fixtures.ts";
 import { looksLikeCard, ok, problem, str, type Ctx, type Reply } from "./stub.ts";
 import { cartView, nextId, quoteGroups, selectedOffer, type StubOrder } from "./stub-state.ts";
+import { DESTINATION_TIME_ZONE, windowEnd, windowStart } from "./stub-delivery.ts";
 
 const needShopper = () => problem(422, "session-required", "Sign in or register first");
 
@@ -58,13 +59,15 @@ function place(ctx: Ctx, s: { cartId: string; shopperId: string; state: string; 
   const cart = store.carts.get(s.cartId);
   const offer = cart ? selectedOffer(cart) : undefined;
   const lineNos = (cart?.lines ?? []).map((_, i) => i + 1);
-  // customer-ordering stores the promise as instants; the cart quoted calendar days.
-  const at = (d: string | undefined, h: string) => (d ? `${d}T${h}:00Z` : new Date().toISOString());
+  // customer-ordering stores the promise as instants with the destination's zone; the cart quoted calendar days.
+  const now = new Date().toISOString();
   const order: StubOrder = {
-    orderId: nextId(store, "ord"), shopperId: s.shopperId, status: "PLACED", placedAt: new Date().toISOString(),
+    orderId: nextId(store, "ord"), shopperId: s.shopperId, status: "PLACED", placedAt: now,
     postal: cart?.destinationPostalPrefix ?? "000", totalMinor: s.totalMinor,
     lines: (cart?.lines ?? []).map((l, i) => ({ lineNo: i + 1, ...l })),
-    groups: offer && cart && quoteGroups(cart).length > 0 ? [{ groupNo: 1, tier: offer.tier, deliverByEarliest: at(offer.deliverByEarliest, "14"), deliverByLatest: at(offer.deliverByLatest, "23"), lineNos }] : [],
+    groups: offer && cart && quoteGroups(cart).length > 0
+      ? [{ groupNo: 1, tier: offer.tier, deliverByEarliest: windowStart(offer.deliverByEarliest), deliverByLatest: windowEnd(offer.deliverByLatest), timeZone: DESTINATION_TIME_ZONE, lineNos }]
+      : [],
   };
   store.orders.set(order.orderId, order);
   if (cart) cart.state = "CHECKED_OUT";
@@ -92,7 +95,7 @@ export function orderRoutes(ctx: Ctx): Reply | null {
   if (!m[2] && method === "GET") {
     return ok({
       ...view(o),
-      tracking: { orderId: o.orderId, status: o.status, groups: o.groups.map((g) => ({ groupNo: g.groupNo, promiseId: `prm-${o.orderId}-${g.groupNo}`, status: groupStatus(o), deliverByEarliest: g.deliverByEarliest, deliverByLatest: g.deliverByLatest, packages: [] })) },
+      tracking: { orderId: o.orderId, status: o.status, groups: o.groups.map((g) => ({ groupNo: g.groupNo, promiseId: `prm-${o.orderId}-${g.groupNo}`, status: groupStatus(o), deliverByEarliest: g.deliverByEarliest, deliverByLatest: g.deliverByLatest, ...(g.timeZone ? { timeZone: g.timeZone } : {}), packages: [] })) },
       totals: { currency: "USD", totalMinor: o.totalMinor },
     });
   }

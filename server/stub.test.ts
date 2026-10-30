@@ -51,6 +51,18 @@ describe("stub BFF contract", () => {
     expect((served.json["tiers"] as unknown as unknown[]).length).toBeGreaterThan(0);
   });
 
+  it("sends each tier's window as the real promise does: 14:00Z..02:00Z instants with the destination's timeZone", async () => {
+    const { json } = await call("POST", "/products/item-kettle:delivery-dates", { postalPrefix: "787" });
+    const tiers = json["tiers"] as unknown as { tier: string; deliverByEarliest: string; deliverByLatest: string; timeZone: string }[];
+    for (const t of tiers) {
+      expect(t.timeZone).toBe("America/Chicago");
+      expect(t.deliverByEarliest).toMatch(/T14:00:00Z$/);
+      expect(t.deliverByLatest).toMatch(/T02:00:00Z$/);
+    }
+    const next = tiers.find((t) => t.tier === "NEXT_DAY");
+    expect(Date.parse(next?.deliverByLatest ?? "") - Date.parse(next?.deliverByEarliest ?? "")).toBe(12 * 3_600_000);
+  });
+
   it("rejects postalPrefix on the cart destination (strict decoder) and answers DESTINATION_NOT_SERVED for an unserved prefix", async () => {
     const { json: cart } = await call("POST", "/carts");
     const id = String(cart["cartId"]);

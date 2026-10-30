@@ -56,7 +56,7 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
       <p className="crumbs"><Link to="/orders">Your Orders</Link> › Order Details</p>
       <h1 id="od-h">Order Details</h1>
       <p className="order-meta">
-        Ordered on {formatPlaced(order.placedAt)} <span className="sep" aria-hidden="true">|</span> Order# <span data-testid="order-number">{order.orderId}</span>
+        Ordered on {formatPlaced(order.placedAt, order.groups[0]?.timeZone)} <span className="sep" aria-hidden="true">|</span> Order# <span data-testid="order-number">{order.orderId}</span>
       </p>
       <div className="order-summary-box">
         <p>Status: <strong data-testid="order-status">{statusLabel(order.status)}</strong></p>
@@ -70,11 +70,13 @@ export default function OrderDetail({ loaderData }: Route.ComponentProps) {
         const track = tracking.get(no);
         const earliest = track?.deliverByEarliest ?? promise?.deliverByEarliest;
         const latest = track?.deliverByLatest ?? promise?.deliverByLatest;
+        // The tracking window is the same group's promise, so it is read in the same destination zone.
+        const timeZone = track?.timeZone ?? promise?.timeZone;
         const lines = (promise?.lineNos ?? []).map((n) => lineByNo.get(n)).filter((l): l is NonNullable<typeof l> => Boolean(l));
         return (
           <article key={no} className="shipment">
             <header className="shipment-head">
-              <p className="promise-window" data-testid="promise-window">{earliest && latest ? arriving(earliest, latest) : "Delivery date pending"}</p>
+              <p className="promise-window" data-testid="promise-window">{earliest && latest ? arriving(earliest, latest, timeZone) : "Delivery date pending"}</p>
               <p className="muted small">
                 {promise ? tierLabel(promise.tier) : ""}{groupNos.length > 1 ? ` · Shipment ${no} of ${groupNos.length}` : ""} · the delivery network&apos;s promise
               </p>

@@ -26,6 +26,9 @@ const mount = (component: unknown, loaderData: Record<string, unknown>, opts: { 
   return render(<SessionProvider initialDestination={dest}><Stub /></SessionProvider>);
 };
 
+// One local delivery day in Chicago as delivery-promise sends it (ADR 0006): 9 AM – 9 PM CDT on Oct 31.
+const CHICAGO_DAY = { deliverByEarliest: "2026-10-31T14:00:00Z", deliverByLatest: "2026-11-01T02:00:00Z", timeZone: "America/Chicago" };
+
 const offers = [
   { offerId: "o-std", groupNo: 1, tier: "STANDARD" as const, deliverByEarliest: "2026-11-03", deliverByLatest: "2026-11-05", expiresAt: "2030-01-01T00:00:00Z" },
   { offerId: "o-nxt", groupNo: 1, tier: "NEXT_DAY" as const, deliverByEarliest: "2026-10-31", deliverByLatest: "2026-10-31", expiresAt: "2030-01-01T00:00:00Z" },
@@ -112,6 +115,11 @@ describe("confirmation page", () => {
     expect(screen.getByTestId("order-id")).toHaveTextContent("ord-1");
     expect(screen.getByRole("link", { name: "Review or track your order" })).toHaveAttribute("href", "/orders/ord-1");
   });
+  it("shows the order's one-day promise in its time zone with hours", () => {
+    const order = { orderId: "ord-1", shopperId: "sh", status: "PLACED", destinationPostalPrefix: "787", placedAt: "2026-10-29T15:00:00Z", lines: [], groups: [{ groupNo: 1, tier: "NEXT_DAY", ...CHICAGO_DAY, lineNos: [1], status: "PROMISED" }] };
+    mount(Confirmation, { session: session("COMPLETED", { orderId: "ord-1" }), order, cart: null });
+    expect(screen.getByTestId("promise-window")).toHaveTextContent("Arriving Saturday, Oct 31, 9 AM – 9 PM");
+  });
   it("falls back to the cart's quoted offer while the order is not readable yet", () => {
     mount(Confirmation, { session: session("COMPLETED", { orderId: "ord-1" }), order: null, cart });
     expect(screen.getByTestId("promise-window")).toHaveTextContent("Arriving Nov 3 – Nov 5");
@@ -155,6 +163,18 @@ describe("orders pages", () => {
     expect(screen.getByText(/weather/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Kettle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancel order" })).toBeInTheDocument();
+  });
+  it("lists and details orders on the destination's calendar; tracking without a zone uses the group's", () => {
+    // Placed 03:00Z Oct 30 is still Oct 29 in Chicago.
+    const zoned = order("PLACED", { placedAt: "2026-10-30T03:00:00Z", groups: [{ groupNo: 1, tier: "NEXT_DAY", ...CHICAGO_DAY, lineNos: [1], status: "PROMISED" }] });
+    const view = mount(Orders, { orders: { items: [zoned] }, signedOut: false });
+    expect(screen.getByText("Oct 29, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Arriving Saturday, Oct 31, 9 AM – 9 PM")).toBeInTheDocument();
+    view.unmount();
+    const tracking = { orderId: "ord-1", status: "PLACED", groups: [{ groupNo: 1, status: "PROMISED", deliverByEarliest: CHICAGO_DAY.deliverByEarliest, deliverByLatest: CHICAGO_DAY.deliverByLatest, packages: [] }] };
+    mount(OrderDetail, { order: { ...zoned, tracking }, products: {} });
+    expect(screen.getByTestId("promise-window")).toHaveTextContent("Arriving Saturday, Oct 31, 9 AM – 9 PM");
+    expect(screen.getByText(/Ordered on Oct 29, 2026/)).toBeInTheDocument();
   });
   it("hides cancel once shipped and says when there are no shipments yet", () => {
     mount(OrderDetail, { order: order("SHIPPED", { groups: [] }), products: {} });
