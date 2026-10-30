@@ -59,7 +59,7 @@ export default function Confirmation({ loaderData }: Route.ComponentProps) {
   }
   if (session.state === "COMPLETED") {
     const promises = order && order.groups.length > 0
-      ? order.groups.map((g) => ({ groupNo: g.groupNo, tier: g.tier as string, window: arriving(g.deliverByEarliest, g.deliverByLatest) }))
+      ? order.groups.map((g) => ({ groupNo: g.groupNo, tier: g.tier as string, window: arriving(g.deliverByEarliest, g.deliverByLatest, g.timeZone) }))
       : reviewGroups(cart, session).map((g) => ({ groupNo: g.groupNo, tier: g.tier, window: g.offer ? arriving(g.offer.deliverByEarliest, g.offer.deliverByLatest) : null }));
     return (
       <section className="page narrow confirm-box" aria-labelledby="c-h">
