@@ -65,7 +65,7 @@ export interface ProductView {
   title: string;
   description?: string;
   bullets?: string[];
-  attributes?: { name: string; value: string }[];
+  attributes?: { name: string; value: string; unit?: string | null }[];
   media?: Media[];
   categoryId?: string;
   categoryPath?: string[];
@@ -79,6 +79,8 @@ export interface DeliveryTier {
   tier: Tier;
   deliverByEarliest: string;
   deliverByLatest: string;
+  /** IANA zone of the destination the window is read in (ADR 0006); absent means UTC. */
+  timeZone?: string;
   offerExpiresAt?: string;
   charge?: { amountMinor?: number; currency?: string };
   freeOver?: { amountMinor?: number; currency?: string };
@@ -189,6 +191,8 @@ export interface TrackingGroup {
   status: string;
   deliverByEarliest: string;
   deliverByLatest: string;
+  /** IANA zone of the destination (ADR 0006); absent means the group's promise zone, else UTC. */
+  timeZone?: string;
   atRiskReason?: string;
   cancelRefusedReason?: string;
   packages: TrackingPackage[];
@@ -201,6 +205,8 @@ export interface GroupPromise {
   shipBy?: string;
   deliverByEarliest: string;
   deliverByLatest: string;
+  /** IANA zone of the destination the window is read in (ADR 0006); absent (orders placed before) means UTC. */
+  timeZone?: string;
   lineNos: number[];
   status: string;
 }

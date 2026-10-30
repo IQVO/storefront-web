@@ -105,6 +105,13 @@ describe("DeliveryPromise", () => {
     expect(screen.getByText(/delivery network's promise for ZIP 78701/)).toBeInTheDocument();
     expect(document.cookie).toContain("sf_dest=");
   });
+  it("shows each tier's window on the destination's calendar with hours for a one-day window", async () => {
+    const chicago = { deliverByEarliest: "2026-10-31T14:00:00Z", deliverByLatest: "2026-11-01T02:00:00Z", timeZone: "America/Chicago" };
+    vi.mocked(q.quoteDeliveryDates).mockResolvedValue(dates({ tiers: [{ tier: "NEXT_DAY", ...chicago, charge: usd(999) }] }));
+    mount({ zip: "78701", prefix: "787" });
+    expect(await screen.findByTestId("promise-main")).toHaveTextContent(/\$9\.99 delivery Saturday, October 31/);
+    expect(screen.getByText(/Arriving Saturday, Oct 31, 9 AM – 9 PM/)).toBeInTheDocument();
+  });
   it("loads automatically when the destination is known and charges below the free threshold", async () => {
     vi.mocked(q.quoteDeliveryDates).mockResolvedValue(dates());
     mount({ zip: "78701", prefix: "787" }, 899);

@@ -14,6 +14,8 @@ export interface PromiseOption {
   tier: Tier;
   earliest: string;
   latest: string;
+  /** The window's IANA zone; absent means UTC. */
+  timeZone?: string;
   /** The charge for this order value: 0 when free (no charge, or the order is over the tier's free threshold); null when unknown. */
   chargeMinor: number | null;
   currency: string;
@@ -31,6 +33,7 @@ const toOption = (t: DeliveryTier, orderMinor: number, currency: string): Promis
   tier: t.tier,
   earliest: t.deliverByEarliest,
   latest: t.deliverByLatest,
+  ...(t.timeZone ? { timeZone: t.timeZone } : {}),
   chargeMinor: effectiveCharge(t, orderMinor),
   currency: t.charge?.currency ?? currency,
 });
@@ -52,7 +55,7 @@ export function pickPromise(tiers: DeliveryTier[], orderMinor: number, currency 
 }
 
 function sameWindow(a: PromiseOption, b: PromiseOption): boolean {
-  return promiseDate(a.earliest, a.latest) === promiseDate(b.earliest, b.latest);
+  return promiseDate(a.earliest, a.latest, a.timeZone) === promiseDate(b.earliest, b.latest, b.timeZone);
 }
 
 /** "FREE" or "$4.99"; null when the charge is unknown. */
