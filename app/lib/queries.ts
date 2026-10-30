@@ -1,6 +1,7 @@
 import { call, query, seg, type CallOptions } from "./api.ts";
 import type {
   Cart,
+  CategoryList,
   CheckoutSession,
   DeliveryDates,
   Order,
@@ -24,6 +25,7 @@ export interface SearchParams {
 export const searchProducts = (p: SearchParams, o?: CallOptions) =>
   call<ProductSearchResult>(`/products${query({ ...p })}`, o);
 export const getProduct = (id: string, o?: CallOptions) => call<ProductView>(`/products/${seg(id)}`, o);
+export const listCategories = (o?: CallOptions) => call<CategoryList>("/categories", o);
 export const quoteDeliveryDates = (id: string, postalPrefix: string, o?: CallOptions) =>
   call<DeliveryDates>(`/products/${seg(id)}:delivery-dates`, { ...o, method: "POST", body: { postalPrefix } });
 
@@ -37,8 +39,9 @@ export const setLineQuantity = (id: string, item: string, quantity: number, acti
   call<Cart>(`/carts/${seg(id)}/lines/${seg(item)}`, { method: "PATCH", body: { quantity }, ...(actionId ? { actionId } : {}) });
 export const removeLine = (id: string, item: string, actionId?: string) =>
   call<Cart>(`/carts/${seg(id)}/lines/${seg(item)}`, { method: "DELETE", ...(actionId ? { actionId } : {}) });
-export const setDestination = (id: string, postalPrefix: string, actionId?: string) =>
-  call<Cart>(`/carts/${seg(id)}/destination`, { method: "POST", body: { postalPrefix }, ...(actionId ? { actionId } : {}) });
+/** The BFF relays the body unchanged to shopping-cart :set-destination, whose strict decoder wants destinationPostalPrefix. */
+export const setDestination = (id: string, destinationPostalPrefix: string, actionId?: string) =>
+  call<Cart>(`/carts/${seg(id)}/destination`, { method: "POST", body: { destinationPostalPrefix }, ...(actionId ? { actionId } : {}) });
 export const quoteCartDelivery = (id: string, actionId?: string) =>
   call<Cart>(`/carts/${seg(id)}/delivery:quote`, { method: "POST", ...(actionId ? { actionId } : {}) });
 export const selectCartDelivery = (id: string, groupNo: number, offerId: string, actionId?: string) =>

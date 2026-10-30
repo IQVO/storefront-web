@@ -9,12 +9,9 @@ export function formatMoney(m: Money | undefined, fallback = "Price unavailable"
   return m ? formatMinor(m.amountMinor, m.currency) : fallback;
 }
 
-export function formatDay(iso: string, locale = "en-US"): string {
-  return new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
-}
-
-export function formatRange(earliest: string, latest: string): string {
-  const a = formatDay(earliest);
-  const b = formatDay(latest);
-  return a === b ? a : `${a} – ${b}`;
+/** The parts of a price for the big-number display: "$", "1,234", "99". */
+export function priceParts(amountMinor: number, currency: string, locale = "en-US"): { symbol: string; whole: string; cents: string } {
+  const parts = new Intl.NumberFormat(locale, { style: "currency", currency }).formatToParts(amountMinor / 100);
+  const join = (types: string[]) => parts.filter((p) => types.includes(p.type)).map((p) => p.value).join("");
+  return { symbol: join(["currency"]), whole: join(["integer", "group"]), cents: join(["fraction"]) };
 }

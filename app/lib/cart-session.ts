@@ -1,5 +1,6 @@
 import { ApiError } from "./api.ts";
 import { addCartLine, createCart, getCart, listCarts } from "./queries.ts";
+import { hasShopperSession } from "./shopper.ts";
 import type { Cart } from "./types.ts";
 
 // The sf_state cookie is HttpOnly and scoped to /api/storefront, so page code cannot read
@@ -31,6 +32,8 @@ export async function currentCart(): Promise<Cart | null> {
     }
     forgetCartId();
   }
+  // GET /carts needs a shopper session (422 otherwise): an anonymous visitor without a remembered cart has none.
+  if (!hasShopperSession()) return null;
   try {
     const res = await listCarts("OPEN");
     const first = (res.items ?? res.carts ?? [])[0];
