@@ -2,12 +2,46 @@ import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { ProductCard } from "~/components/ProductCard.tsx";
 import { serverOpts } from "~/lib/api.server.ts";
-import { searchProducts } from "~/lib/queries.ts";
+import { departments, illustrationFor } from "~/lib/departments.ts";
+import { listCategories, searchProducts } from "~/lib/queries.ts";
+import type { ProductHit } from "~/lib/types.ts";
 
+const ROWS = 4;
+const PER_ROW = 6;
+
+interface Row {
+  title: string;
+  categoryId?: string;
+  hits: ProductHit[];
+}
+
+/**
+ * Department cards from the category tree, then one "Popular in" row per busiest department (one
+ * search each, SSR). Without a tree (a BFF that does not serve /categories yet) the rows come from
+ * one search grouped by the department name the hits carry.
+ */
 export async function loader({ request }: Route.LoaderArgs) {
-  const result = await searchProducts({ limit: 8, sort: "relevance" }, serverOpts(request));
-  const categories = result.facets.find((f) => f.name === "category")?.values ?? [];
-  return { hits: result.hits, categories };
+  const opts = serverOpts(request);
+  const depts = departments(await listCategories(opts).catch(() => null));
+  let rows: Row[];
+  if (depts.length > 0) {
+    const busiest = [...depts].sort((a, b) => b.purchasableCount - a.purchasableCount).slice(0, ROWS);
+    rows = await Promise.all(
+      busiest.map(async (d) => ({ title: d.name, categoryId: d.categoryId, hits: (await searchProducts({ categoryId: d.categoryId, limit: PER_ROW }, opts)).hits })),
+    );
+  } else {
+    const { hits } = await searchProducts({ limit: 48 }, opts);
+    const byDept = new Map<string, ProductHit[]>();
+    for (const h of hits) {
+      const name = h.categoryPath?.[0] ?? "Featured";
+      byDept.set(name, [...(byDept.get(name) ?? []), h]);
+    }
+    rows = [...byDept].sort((a, b) => b[1].length - a[1].length).slice(0, ROWS).map(([title, list]) => ({ title, hits: list.slice(0, PER_ROW) }));
+  }
+  return {
+    departments: depts.map((d) => ({ categoryId: d.categoryId, name: d.name, count: d.purchasableCount, image: illustrationFor(d.name) })),
+    rows: rows.filter((r) => r.hits.length > 0),
+  };
 }
 
 export function headers() {
@@ -15,27 +49,48 @@ export function headers() {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { hits, categories } = loaderData;
+  const { departments: depts, rows } = loaderData;
   return (
-    <div>
-      <section className="panel" aria-labelledby="hero-h">
-        <h1 id="hero-h">Everyday essentials, delivered</h1>
-        <p className="muted">Browse the catalogue, pick a delivery date and check out with a simulated payment.</p>
+    <div className="home">
+      <section className="hero" aria-labelledby="hero-h">
+        <div className="hero-inner">
+          <h1 id="hero-h">Everything for home, work and play, delivered</h1>
+          <p>Thousands of everyday products with a delivery date you can count on. Enter your ZIP code to see when your order arrives.</p>
+          <Link to="/search" className="btn btn-primary hero-cta">Shop all products</Link>
+        </div>
       </section>
-      {categories.length > 0 && (
-        <nav aria-label="Categories" className="row">
-          {categories.map((c) => (
-            <Link key={c.value} className="button secondary" to={`/search?categoryId=${encodeURIComponent(c.value)}`}>
-              {c.value} ({c.count})
-            </Link>
-          ))}
-        </nav>
+
+      {depts.length > 0 && (
+        <section className="shelf" aria-labelledby="dept-h">
+          <h2 id="dept-h">Shop by department</h2>
+          <ul className="dept-grid">
+            {depts.map((d) => (
+              <li key={d.categoryId} className="dept-card">
+                <Link to={`/search?categoryId=${encodeURIComponent(d.categoryId)}`} className="dept-link">
+                  <span className="dept-media">
+                    {d.image ? <img src={d.image} alt="" width="200" height="150" loading="lazy" /> : <span className="no-image" />}
+                  </span>
+                  <span className="dept-name">{d.name}</span>{" "}
+                  <span className="dept-count">{d.count} {d.count === 1 ? "item" : "items"}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-      <h2>Featured products</h2>
-      {hits.length === 0 ? (
-        <p>No products are available right now.</p>
+
+      {rows.length === 0 ? (
+        <p className="panel">No products are available right now.</p>
       ) : (
-        <ul className="grid">{hits.map((h, i) => <ProductCard key={h.catalogItemId} hit={h} priority={i < 4} />)}</ul>
+        rows.map((r, i) => (
+          <section key={r.title} className="shelf" aria-labelledby={`row-${i}`}>
+            <div className="shelf-head">
+              <h2 id={`row-${i}`}>Popular in {r.title}</h2>
+              {r.categoryId && <Link to={`/search?categoryId=${encodeURIComponent(r.categoryId)}`} className="see-more">See more</Link>}
+            </div>
+            <ul className="tile-row">{r.hits.map((h, j) => <ProductCard key={h.catalogItemId} hit={h} priority={i === 0 && j < 4} />)}</ul>
+          </section>
+        ))
       )}
     </div>
   );
