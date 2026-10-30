@@ -1,5 +1,7 @@
 # storefront-web
 
+[![CI](https://github.com/IQVO/storefront-web/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/IQVO/storefront-web/actions/workflows/ci.yml?query=branch%3Adevelop) [![Node](https://img.shields.io/badge/node-22.18-339933?logo=nodedotjs&logoColor=white)](https://github.com/IQVO/storefront-web/blob/develop/package.json) [![docs](https://img.shields.io/badge/docs-iqvo.github.io-blue)](https://iqvo.github.io/storefront-web/)
+
 The React server-side-rendered storefront of the retail-network storefront domain: home, search and category,
 product page, cart, checkout, confirmation, orders, order detail with tracking, and order cancellation.
 
