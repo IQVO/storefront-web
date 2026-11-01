@@ -1,0 +1,17 @@
+# Non-secret configuration of the web component, mirrored from the env the
+# Deployment renders and mounted into the web container with envFrom (the
+# explicit env entries win for the same key); the Deployment's checksum/config
+# annotation rolls the pods whenever any of it changes. Every key is a variable
+# server/index.ts reads (tests/render_test.sh). storefront-web holds no
+# secrets: the only backend URL is the in-cluster BFF origin.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "storefront-web.fullname" . }}
+  labels:
+    {{- include "storefront-web.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+data:
+  BFF_URL: {{ .Values.config.bffUrl | quote }}
+  PORT: {{ .Values.config.port | quote }}
+  COOKIE_SECURE: {{ .Values.config.cookieSecure | quote }}

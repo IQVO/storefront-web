@@ -1,0 +1,100 @@
+{{- include "storefront-web.requireRealRuntime" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "storefront-web.fullname" . }}
+  labels:
+    {{- include "storefront-web.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "storefront-web.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "storefront-web.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "storefront-web.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "storefront-web.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          # Every non-secret config.* value also reaches the server through the
+          # chart ConfigMap; the explicit `env` entries below win over envFrom
+          # for the same key and carry the same values. The checksum/config
+          # annotation above rolls the pods when the ConfigMap changes.
+          # tests/render_test.sh asserts the mount and that every variable
+          # server/index.ts reads is rendered.
+          envFrom:
+            - configMapRef:
+                name: {{ include "storefront-web.fullname" . }}
+          # The env contract is the README's variable table. A value with a
+          # dedicated chart key is rendered here, never through extraEnv.
+          env:
+            # The one backend: SSR loaders call it and /api/storefront is
+            # proxied to it. Never reaches the client bundle.
+            - name: BFF_URL
+              value: {{ .Values.config.bffUrl | quote }}
+            - name: PORT
+              value: {{ .Values.config.port | quote }}
+            - name: COOKIE_SECURE
+              value: {{ .Values.config.cookieSecure | quote }}
+            {{- range .Values.extraEnv }}
+            - {{ toYaml . | nindent 14 | trim }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          # The server writes nothing to disk and the root filesystem is
+          # read-only; /tmp is a small scratch volume for the runtime.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
