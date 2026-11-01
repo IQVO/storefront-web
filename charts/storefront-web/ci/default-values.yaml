@@ -1,0 +1,4 @@
+# Used by `helm lint` / `ct lint` (chart-testing): the chart refuses to render
+# without config.bffUrl. Dummy origin; nothing here is ever dialled.
+config:
+  bffUrl: "http://storefront-bff.example.invalid"

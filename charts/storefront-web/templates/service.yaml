@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "storefront-web.fullname" . }}
+  labels:
+    {{- include "storefront-web.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  # component=web pins the Service to the web Deployment's pods
+  # (tests/test_service_selectors.py).
+  selector:
+    {{- include "storefront-web.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: web

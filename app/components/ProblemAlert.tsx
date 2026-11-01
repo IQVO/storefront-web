@@ -10,6 +10,8 @@ export function problemMessage(error: unknown): string {
         return "This order can no longer be cancelled because fulfilment has started.";
       case "payment-declined":
         return "The payment was declined. Choose another scenario and try again.";
+      case "stale-delivery-selection":
+        return "Delivery options were just refreshed. Please choose your delivery option again.";
     }
     if (error.status === 504) return "That took too long. Nothing was changed; please try again.";
     if (error.status === 503) return "The store is temporarily unavailable. Please try again shortly.";

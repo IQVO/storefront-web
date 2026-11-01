@@ -1,0 +1,8 @@
+node_modules
+build
+.react-router
+coverage
+.lighthouseci
+playwright-report
+test-results
+.git
