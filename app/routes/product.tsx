@@ -23,8 +23,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   }
 }
 
-export function meta({ data }: Route.MetaArgs) {
-  return [{ title: data?.product.title ? `${data.product.title} : Sample Storefront` : "Product" }];
+export function meta({ loaderData }: Route.MetaArgs) {
+  return [{ title: loaderData?.product.title ? `${loaderData.product.title} : Sample Storefront` : "Product" }];
 }
 
 const QUANTITIES = Array.from({ length: 10 }, (_, i) => i + 1);

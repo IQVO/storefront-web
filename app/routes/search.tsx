@@ -14,8 +14,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   return { params, offset: offsetFromUrl(url), result };
 }
 
-export function meta({ data }: Route.MetaArgs) {
-  return [{ title: data?.params.q ? `Sample Storefront: ${data.params.q}` : "Sample Storefront: all products" }];
+export function meta({ loaderData }: Route.MetaArgs) {
+  return [{ title: loaderData?.params.q ? `Sample Storefront: ${loaderData.params.q}` : "Sample Storefront: all products" }];
 }
 
 export default function Search({ loaderData }: Route.ComponentProps) {
