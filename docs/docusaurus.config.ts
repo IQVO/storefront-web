@@ -6,7 +6,7 @@ import type * as OpenApiPlugin from 'docusaurus-plugin-openapi-docs';
 const config: Config = {
   title: 'Storefront Web',
   tagline:
-    'Storefront Web: the storefront web application of warehouse-systems.',
+    'A React Router 7 SSR storefront that talks only to the BFF, under a strict CSP.',
   favicon: 'img/favicon.svg',
 
   future: {

@@ -15,15 +15,26 @@ This project is a domain-driven design study. It is not associated with, endorse
 
 ## Documentation
 
-This storefront front end is documented as part of the warehouse-docs
-storefront section — the storefront domain pages and the model that is the
-single source of truth live at
-<https://iqvo.github.io/warehouse-docs/storefront/>. Decisions for this repo
-live in docs/adr/ (5 ADRs).
+The documentation site is published at <https://iqvo.github.io/storefront-web/> (source in `docs/`, built by the `Docs` workflow). Decisions live in [`docs/adr/`](docs/adr) (6 ADRs, indexed on the site).
+
+| Page | What it covers |
+|---|---|
+| [Introduction](https://iqvo.github.io/storefront-web/docs/overview/introduction) | what the storefront owns and does not own, subdomain class, capabilities |
+| [Architecture](https://iqvo.github.io/storefront-web/docs/overview/architecture) | Node server, routes and loaders, BFF client, cookie state, CSP, SSR, container diagram |
+| [Quickstart](https://iqvo.github.io/storefront-web/docs/overview/quickstart) | prerequisites, `make`/`npm` targets, running against the stub or a real BFF |
+| [Configuration](https://iqvo.github.io/storefront-web/docs/operations/configuration) | every environment variable, Helm values, fixed behaviour, tooling knobs |
+| [Runbook](https://iqvo.github.io/storefront-web/docs/operations/runbook) | runtime shape, probes, release and rollback, failure modes |
+| [Troubleshooting](https://iqvo.github.io/storefront-web/docs/operations/troubleshooting) | symptom, cause, check, fix for the server, shopper flows and CI sensors |
+| [Testing](https://iqvo.github.io/storefront-web/docs/development/testing) | vitest, stub BFF, Playwright journeys, bundle sensor, Lighthouse budgets, CI jobs |
+| [Integration](https://iqvo.github.io/storefront-web/docs/ecosystem/integration) | the storefront-bff routes it calls and how each failure surfaces |
+| [ADR index](https://iqvo.github.io/storefront-web/docs/adr) | the six architecture decision records |
+
+The storefront section of warehouse-docs places this app in the wider model:
+<https://iqvo.github.io/warehouse-docs/storefront/>.
 
 ## Stack
 
-React 19, Vite 7, React Router 7 framework mode (SSR on Node), TypeScript strict, vitest + Testing Library,
+React 19, Vite 8, React Router 7 framework mode (SSR on Node), TypeScript strict, vitest + Testing Library,
 Playwright, Lighthouse CI. Decisions: [docs/adr](docs/adr).
 
 ## Run
@@ -132,10 +143,11 @@ See `HARNESS.md`.
 
 ## Architecture Decision Records
 
-Five ADRs live in [`docs/adr/`](docs/adr/):
+Six ADRs live in [`docs/adr/`](docs/adr/):
 
 - [0001 — React Router 7 framework SSR](docs/adr/0001-react-router-7-framework-ssr.md)
 - [0002 — BFF-only API access and the state cookie](docs/adr/0002-bff-only-and-state-cookie.md)
 - [0003 — strict, nonce-based CSP](docs/adr/0003-strict-csp.md)
 - [0004 — simulated payment fields](docs/adr/0004-simulated-payment-fields.md)
 - [0005 — CI sensors and the stub BFF](docs/adr/0005-ci-sensors-and-stub-bff.md)
+- [0006 — promise windows in the destination's time zone](docs/adr/0006-promise-windows-in-the-destination-time-zone.md)

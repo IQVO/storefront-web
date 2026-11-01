@@ -35,7 +35,11 @@ function HomepageHeader() {
           {siteConfig.title}
         </Heading>
         <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
-        <p className={styles.heroLead}>TODO-LEAD</p>
+        <p className={styles.heroLead}>
+          The server-rendered React storefront of the retail network: browse, search, see a delivery promise for your
+          ZIP, fill a cart, check out with simulated payment and track the order. It talks to one backend, the
+          storefront-bff, and holds no data, no card numbers and no secrets of its own.
+        </p>
         <div className={styles.buttons}>
           <Link className="button button--primary button--lg" to="/docs/overview/introduction">
             Read the docs
