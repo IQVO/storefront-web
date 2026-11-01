@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDay, formatMinor, formatMoney, formatRange } from "./money.ts";
+import { formatMinor, formatMoney, priceParts } from "./money.ts";
 
 describe("money", () => {
   it("formats integer minor units", () => {
@@ -8,9 +8,8 @@ describe("money", () => {
     expect(formatMoney({ amountMinor: 899, currency: "USD" })).toBe("$8.99");
     expect(formatMoney(undefined)).toBe("Price unavailable");
   });
-  it("formats dates in UTC and collapses single-day ranges", () => {
-    expect(formatDay("2030-01-05T23:30:00Z")).toBe("Sat, Jan 5");
-    expect(formatRange("2030-01-05T00:00:00Z", "2030-01-05T23:59:00Z")).toBe("Sat, Jan 5");
-    expect(formatRange("2030-01-10T00:00:00Z", "2030-01-12T00:00:00Z")).toBe("Thu, Jan 10 – Sat, Jan 12");
+  it("splits a price into symbol, whole and cents for the big-number display", () => {
+    expect(priceParts(123456, "USD")).toEqual({ symbol: "$", whole: "1,234", cents: "56" });
+    expect(priceParts(899, "USD")).toEqual({ symbol: "$", whole: "8", cents: "99" });
   });
 });

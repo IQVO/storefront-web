@@ -18,3 +18,6 @@ paths:
 - `server/stub-handler.ts` + `stub-commerce.ts` mirror the BFF for CI. When the BFF contract changes, update the
   stub AND the contract tests in `app/lib/queries.test.ts` in the same change.
 - Errors are RFC 9457 problems (`ApiError.slug`); shopper-facing text lives in `components/ProblemAlert.tsx`.
+- A delivery destination is ALWAYS `postalPrefixOf(zip)` (`lib/destination.ts`, 3 characters), never the full ZIP;
+  the cart destination body is exactly `{destinationPostalPrefix}` (the upstream decoders are strict).
+- Calls that need a shopper session (`GET /carts`, the header's `/me`) are made only when `hasShopperSession()`.
