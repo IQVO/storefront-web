@@ -76,7 +76,7 @@ Source: `app/routes.ts`, `app/routes/*.tsx`, `app/root.tsx`.
 ## The BFF client
 
 - `app/lib/api.ts` is the **only** place that knows a backend base: `API_BASE = "/api/storefront"`. `callRaw`/`call` send `Accept: application/json, application/problem+json`, `Content-Type: application/json` when there is a body, `X-Action-Id` when an action id is given, and `credentials: "same-origin"`. A non-2xx answer throws `ApiError` carrying the RFC 9457 problem; `ApiError.slug` is the last segment of the problem type (for example `session-required`).
-- `app/lib/queries.ts` has one one-liner per BFF operation (29 operations, listed on [Integration](../ecosystem/integration.md)). Path segments go through `seg()` (URL-encoded) and query strings through `query()` (empty values dropped).
+- `app/lib/queries.ts` has one one-liner per BFF operation (23 operations, listed on [Integration](../ecosystem/integration.md)). Path segments go through `seg()` (URL-encoded) and query strings through `query()` (empty values dropped).
 - `app/lib/api.server.ts` is a `.server` module, excluded from the client bundle by React Router. `serverBase()` returns `<BFF_URL>/api/storefront`; `serverOpts(request)` adds the incoming `Cookie` header and the request's abort signal for SSR loader calls.
 - `app/lib/action-id.ts` mints one `X-Action-Id` per user action: the same click retried reuses it (so the BFF's idempotency key deduplicates), and it is renewed after success.
 - `app/components/ProblemAlert.tsx` maps stable problem slugs (`session-required`, `cancel-after-lock`, `payment-declined`, `stale-delivery-selection`) and 503/504 to shopper-facing text; route actions never throw to the boundary (`guarded` in `app/lib/action-result.ts`).
