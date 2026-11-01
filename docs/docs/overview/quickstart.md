@@ -33,7 +33,7 @@ npm run build
 npm run start:stub        # STOREFRONT_STUB=1 node server/index.ts, listening on :3000
 ```
 
-The server logs `storefront-web listening on :3000 (stub BFF)`. Open <http://localhost:3000/>. The stub serves synthetic departments and products (for example `item-kettle`, `item-mug`) and enforces the same contract as the real BFF: a 3-character destination prefix, `422 session-required` on `GET /carts` without a shopper, problem+json errors. Typing the ZIP `78701` (prefix `787`) gives delivery promises; `10001` is answered "not served".
+The server logs `storefront-web listening on :3000 (stub BFF)`. Open `http://localhost:3000/`. The stub serves synthetic departments and products (for example `item-kettle`, `item-mug`) and enforces the same contract as the real BFF: a 3-character destination prefix, `422 session-required` on `GET /carts` without a shopper, problem+json errors. Typing the ZIP `78701` (prefix `787`) gives delivery promises; `10001` is answered "not served".
 
 First calls, from another terminal:
 
