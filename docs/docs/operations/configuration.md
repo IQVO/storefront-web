@@ -65,7 +65,7 @@ These are constants in code, listed so nobody hunts for a knob:
 
 | Behaviour | Value | Where |
 |---|---|---|
-| Proxy upstream timeout | 20 s, then `503 application/problem+json` (`/problems/upstream-unavailable`) | `server/proxy.ts` |
+| Proxy upstream timeout | 20 s, then `503 application/problem+json` (`/problems/upstream-unavailable`); a request target with its own host is refused `400 /problems/invalid-request-target` | `server/proxy.ts` |
 | SSR stream timeout | `streamTimeout` 5 s (abort at 6 s) | `app/entry.server.tsx` |
 | Static assets cache | `/assets/*` `public, max-age=31536000, immutable`; everything else `public, max-age=300` | `server/static.ts` |
 | Compression | Brotli (quality 5) then gzip for HTML and compressible static files over 1 KiB | `server/static.ts`, `app/entry.server.tsx` |

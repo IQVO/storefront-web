@@ -23,9 +23,14 @@ Each entry is a symptom, the cause in code, how to check it and the fix. The dep
 - **Check**: the same `fetch` as above from the pod; DNS and Service name of the BFF; `kubectl get cm storefront-web -o yaml` for `BFF_URL`.
 - **Fix**: same as above. In a cluster the gateway normally routes `/api/storefront` straight to the BFF, so a 503 with this body means the request came through this server's proxy (a port-forward, a direct hit, or a gateway rule that sends the prefix to the web).
 
+### 400 `/problems/invalid-request-target` on `/api/storefront`
+
+- **Cause**: the proxy refuses a request target that carries its own authority (absolute-form `http://host/x` or protocol-relative `//host/x`) so it can never be steered to another host (SSRF guard, `server/proxy.ts`, `server/proxy.test.ts`). The upstream scheme, host and port always come from `BFF_URL`.
+- **Fix**: send root-relative paths (`/api/storefront/...`). A client that sends absolute-form targets to the web server is misconfigured.
+
 ### 404 on every BFF call, or paths like `/api/storefront/api/storefront/...`
 
-- **Cause**: `BFF_URL` carries a path. It must be an **origin**; both `serverBase()` (`app/lib/api.server.ts`) and the proxy append `/api/storefront` themselves.
+- **Cause**: `BFF_URL` carries a path. It must be an **origin**; `serverBase()` (`app/lib/api.server.ts`) appends `/api/storefront` to whatever it holds, so the SSR loaders call `<path>/api/storefront/...`. (The proxy in `server/proxy.ts` uses only scheme, host and port from `BFF_URL` and ignores its path, so browser calls through the proxy may still work while the SSR pages fail.)
 - **Check**: the value of `BFF_URL` in the ConfigMap.
 - **Fix**: set `config.bffUrl` to `http://host:port` with no path.
 
@@ -138,6 +143,11 @@ Each entry is a symptom, the cause in code, how to check it and the fix. The dep
 - **Cause**: the median of three runs exceeded LCP 2.5 s, TBT 200 ms or CLS 0.1 on `/`, `/search?q=mug`, `/products/item-kettle` or `/cart`, in mobile or desktop mode (`lighthouserc.cjs`).
 - **Check**: the `lighthouse-reports` artifact (`.lighthouseci/mobile`, `.lighthouseci/desktop`).
 - **Fix**: look for new blocking JavaScript, an unsized image (CLS), or a loader that became slower. Do not raise the budget.
+
+### `file-length` fails on a pull request
+
+- **Cause**: on pull requests into `develop` the job runs oxlint `eslint/max-lines` (300 lines of code, blank lines and comments not counted; `.oxlintrc.file-length.json`) over every `.ts`/`.tsx` file the PR adds or touches. Tests, `e2e/`, `docs/` and `build/` are ignored.
+- **Fix**: split the file you touched. On pushes and release PRs the same check is informational only. It is not one of the required checks.
 
 ### Coverage threshold failure in `web`
 

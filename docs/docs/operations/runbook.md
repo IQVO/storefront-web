@@ -14,7 +14,7 @@ Storefront Web is the retail network's shopper-facing storefront: a React 19 ser
 One `web` Deployment (`charts/storefront-web/templates/deployment.yaml`, 1 replica by default) runs `node server/index.ts` (the image's `CMD`, root `Dockerfile`): one process that, on `PORT` (default 3000):
 
 - answers `GET /healthz` and `GET /readyz` itself (any path equal to either, any method),
-- proxies `/api/storefront` and `/api/storefront/*` to the BFF (`server/proxy.ts`), so the browser only ever sees the relative base `/api/storefront`,
+- proxies `/api/storefront` and `/api/storefront/*` to the BFF (`server/proxy.ts`), so the browser only ever sees the relative base `/api/storefront`. The upstream scheme, host and port come from `BFF_URL` alone; only the path and query of the incoming request are forwarded, and a request target with its own authority is refused with `400 /problems/invalid-request-target` (SSRF guard),
 - serves the static client assets from `build/client` (GET and HEAD only; fingerprinted `/assets/*` are `immutable`, the rest `max-age=300`, Brotli or gzip above 1 KiB),
 - hands everything else to the React Router SSR handler, which streams HTML with a per-request CSP nonce (`app/entry.server.tsx`, `app/csp.ts`).
 
