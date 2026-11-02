@@ -28,25 +28,25 @@ All paths are relative to `/api/storefront`. In the browser they are fetched wit
 
 | Function | Method and path | Where it runs | Used by | Upstream behind the BFF |
 |---|---|---|---|---|
-| `searchProducts` | `GET /products` (`q`, `categoryId`, `inStock`, `priceMin`, `priceMax`, `sort`, `after`, `limit`) | server | `/`, `/search` | product-discovery |
+| `searchProducts` | `GET /products` (`q`, `categoryId`, `inStock`, `priceMin`, `priceMax`, `sort`, `cursor`, `limit`) | server | `/`, `/search` | product-discovery |
 | `getProduct` | `GET /products/{id}` | server, and browser (cart, checkout, order detail titles) | `/products/:id`, `/cart`, `/checkout`, `/orders/:id` | product-discovery |
 | `listCategories` | `GET /categories` | server | root layout, `/` | product-discovery |
-| `quoteDeliveryDates` | `POST /products/{id}:delivery-dates` body `{postalPrefix}` | browser | buy box, cart | delivery-promise joined with pricing |
+| `quoteDeliveryDates` | `POST /products/{id}/delivery-date-quotes` body `{postalPrefix}` | browser | buy box, cart | delivery-promise joined with pricing |
 | `createCart` | `POST /carts` | browser | first add to cart | shopping-cart |
 | `listCarts` | `GET /carts?state=OPEN` | browser, only with a remembered shopper | cart lookup | shopping-cart |
 | `getCart` | `GET /carts/{id}` | browser | cart, checkout, confirmation | shopping-cart |
 | `addCartLine` | `POST /carts/{id}/lines` body `{catalogItemId, quantity}` | browser | add to cart | shopping-cart |
 | `setLineQuantity` | `PATCH /carts/{id}/lines/{item}` body `{quantity}` | browser | cart | shopping-cart |
 | `removeLine` | `DELETE /carts/{id}/lines/{item}` | browser | cart | shopping-cart |
-| `setDestination` | `POST /carts/{id}/destination` body `{destinationPostalPrefix}` | browser | cart | shopping-cart |
-| `quoteCartDelivery` | `POST /carts/{id}/delivery:quote` | browser | cart | shopping-cart |
-| `selectCartDelivery` | `POST /carts/{id}/delivery:select` body `{groupNo, offerId}` | browser | cart | shopping-cart |
+| `setDestination` | `PUT /carts/{id}/destination` body `{destinationPostalPrefix}` | browser | cart | shopping-cart |
+| `quoteCartDelivery` | `POST /carts/{id}/delivery-quotes` | browser | cart | shopping-cart |
+| `selectCartDelivery` | `PUT /carts/{id}/delivery-selection` body `{groupNo, offerId}` | browser | cart | shopping-cart |
 | `openCheckout` | `POST /checkout` body `{shipToAddressId, cartId?}` | browser | checkout | checkout |
 | `getCheckout` | `GET /checkout/{id}` | browser | checkout, confirmation | checkout |
-| `confirmCheckout` | `POST /checkout/{id}:confirm` body `{paymentMethodToken}` | browser | checkout | checkout |
-| `listOrders` | `GET /orders?after=` | browser | `/orders` | customer-ordering |
+| `confirmCheckout` | `POST /checkout/{id}/confirmations` body `{paymentMethodToken}` | browser | checkout | checkout |
+| `listOrders` | `GET /orders?cursor=` | browser | `/orders` | customer-ordering |
 | `getOrder` | `GET /orders/{id}` | browser | confirmation, order detail | customer-ordering |
-| `cancelOrder` | `POST /orders/{id}:cancel` body `{reason}` | browser | order detail | customer-ordering |
+| `cancelOrder` | `POST /orders/{id}/cancellations` body `{reason}` | browser | order detail | customer-ordering |
 | `createSession` | `POST /sessions` body `{email}` | browser | sign in | customer-ordering |
 | `registerShopper` | `POST /shoppers` | browser | register | customer-ordering |
 | `getMe` | `GET /me` | browser | account, checkout, header | customer-ordering |
@@ -54,14 +54,14 @@ All paths are relative to `/api/storefront`. In the browser they are fetched wit
 
 The "upstream behind the BFF" column is informational and comes from the aggregator's storefront components page (warehouse-docs, `storefront/docs/components.md`); the web never addresses those services. All 23 operations above exist in the BFF's `storefront/apis/storefront-bff/openapi.yaml` on warehouse-docs `main`; the BFF also serves `GET /healthz` and `GET /readyz`, which the web does not call.
 
-Mutating calls carry `X-Action-Id` (one random token per user action, reused on a retry of the same click) so the BFF can deduplicate with the idempotency key it mints.
+Every POST and PATCH carries `Idempotency-Key` (one random UUID per user action, reused on a retry of the same click until it succeeded; `callRaw` mints a fresh one when a caller gives none). The retired `X-Action-Id` header is gone. `409 /problems/idempotency-key-reused` is a bug in the page (it is logged, never retried); a missing or malformed key is `400 idempotency-key-required` / `idempotency-key-invalid`. PUT and DELETE take no key. Lists answer `{items, nextCursor}` (search adds `facets` and `categorySuggestions`): the web sends `limit` and `cursor` (never `after`) and reads `items`; search and orders show one page with a "Next page" / "Older orders" link carrying `nextCursor`, and `GET /carts?state=OPEN` reads the first page. `GET /categories` is the BFF's exempt navigation view and keeps `{version, categories}`.
 
 ## Contract rules the web relies on
 
 - **State cookie.** The BFF sets and reads `sf_state` (cart, shopper and last-checkout ids) with `HttpOnly; SameSite=Lax; Path=/api/storefront`. The web forwards it implicitly in the browser and explicitly in SSR loaders (`serverOpts`). It is state, not authentication.
-- **Destination prefix.** The retail network keys delivery quotes by the first 3 characters of the postal code. The web sends `postalPrefixOf(zip)` for `:delivery-dates` (`{postalPrefix}`) and for the cart destination (`{destinationPostalPrefix}`); upstream decoders are strict, so any other field is a 400.
+- **Destination prefix.** The retail network keys delivery quotes by the first 3 characters of the postal code. The web sends `postalPrefixOf(zip)` for `/delivery-date-quotes` (`{postalPrefix}`) and for the cart destination (`{destinationPostalPrefix}`); upstream decoders are strict, so any other field is a 400.
 - **Session-required.** `GET /carts`, `GET /me` and the order calls answer `422 /problems/session-required` without a shopper in the cookie; the web asks only when it holds a shopper marker.
-- **Payment.** `POST /checkout/{id}:confirm` receives only `tok_approve`, `tok_decline` or `tok_timeout`. The BFF refuses card-shaped tokens with 422.
+- **Payment.** `POST /checkout/{id}/confirmations` receives only `tok_approve`, `tok_decline` or `tok_timeout`. The BFF refuses card-shaped tokens with 422.
 - **Time zones.** Delivery windows carry an optional IANA `timeZone`; absent means UTC (ADR 0006).
 - **Optional route.** `GET /categories` may be missing on an older BFF; the web degrades to an "All" department bar.
 

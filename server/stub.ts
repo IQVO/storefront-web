@@ -94,7 +94,7 @@ function productRoutes(ctx: Ctx): Reply | null {
       return [...m].map(([value, count]) => ({ value, count }));
     };
     return ok({
-      hits: hits.slice(0, limit).map((p) => ({
+      items: hits.slice(0, limit).map((p) => ({
         catalogItemId: p.id, title: p.title, effectivePrice: { amountMinor: p.priceMinor, currency: "USD" },
         primaryMedia: mediaFor(ctx, p), categoryId: p.category, categoryPath: namePath(p.category), inStock: p.inStock, purchasable: p.inStock,
       })),
@@ -103,10 +103,9 @@ function productRoutes(ctx: Ctx): Reply | null {
         { name: "price-band", values: tally((p) => bandOf(p.priceMinor)).sort((a, b) => Number(a.value.replace(/\D.*/, "")) - Number(b.value.replace(/\D.*/, ""))) },
         { name: "in-stock", values: tally((p) => String(p.inStock)).sort((a, b) => Number(b.value === "true") - Number(a.value === "true")) },
       ],
-      next: null,
     });
   }
-  const dd = /^\/products\/([^/:]+):delivery-dates$/.exec(path);
+  const dd = /^\/products\/([^/]+)\/delivery-date-quotes$/.exec(path);
   if (method === "POST" && dd) {
     const bad = unknownField(body, ["postalPrefix"]);
     if (bad) return bad;
@@ -116,7 +115,7 @@ function productRoutes(ctx: Ctx): Reply | null {
     if (!isServed(postal)) return ok({ postalPrefix: postal, tiers: [], unavailable: notServed() });
     return ok({ postalPrefix: postal, tiers: productTiers(Date.now()), unavailable: [{ tier: "SAME_DAY", constraint: "PAST_ORDER_DEADLINE" }] });
   }
-  const one = /^\/products\/([^/:]+)$/.exec(path);
+  const one = /^\/products\/([^/]+)$/.exec(path);
   if (method === "GET" && one) {
     const p = byId(decodeURIComponent(one[1] ?? ""));
     if (!p) return problem(404, "not-found", "Product not found");
@@ -147,7 +146,7 @@ function cartRoutes(ctx: Ctx): Reply | null {
     const mine = [...store.carts.values()].filter((c) => c.shopperId === state.s && c.state === (ctx.url.searchParams.get("state") ?? "OPEN"));
     return ok({ items: mine.map(view) });
   }
-  const m = /^\/carts\/([^/:]+)(.*)$/.exec(path);
+  const m = /^\/carts\/([^/]+)(.*)$/.exec(path);
   if (!m) return null;
   const cart = store.carts.get(decodeURIComponent(m[1] ?? ""));
   if (!cart) return problem(404, "not-found", "Cart not found");
@@ -164,7 +163,7 @@ function cartRoutes(ctx: Ctx): Reply | null {
     if (line) line.quantity = Math.min(99, line.quantity + qty); else cart.lines.push({ catalogItemId: id, quantity: qty });
     return touch();
   }
-  const li = /^\/lines\/([^/:]+)$/.exec(rest);
+  const li = /^\/lines\/([^/]+)$/.exec(rest);
   if (li && method === "PATCH") {
     const line = cart.lines.find((l) => l.catalogItemId === decodeURIComponent(li[1] ?? ""));
     if (!line) return problem(404, "not-found", "Line not found");
@@ -175,7 +174,7 @@ function cartRoutes(ctx: Ctx): Reply | null {
     cart.lines = cart.lines.filter((l) => l.catalogItemId !== decodeURIComponent(li[1] ?? ""));
     return touch();
   }
-  if (rest === "/destination" && method === "POST") {
+  if (rest === "/destination" && method === "PUT") {
     // shopping-cart :set-destination decodes strictly: {destinationPostalPrefix} only.
     const bad = unknownField(body, ["destinationPostalPrefix"]);
     if (bad) return bad;
@@ -184,7 +183,7 @@ function cartRoutes(ctx: Ctx): Reply | null {
     cart.destinationPostalPrefix = p;
     return touch();
   }
-  if (rest === "/delivery:quote" && method === "POST") {
+  if (rest === "/delivery-quotes" && method === "POST") {
     if (!cart.destinationPostalPrefix) return problem(422, "no-destination", "Set a destination first");
     cart.quotedAt = Date.now();
     cart.served = isServed(cart.destinationPostalPrefix);
@@ -192,7 +191,7 @@ function cartRoutes(ctx: Ctx): Reply | null {
     cart.version += 1;
     return ok(view(cart));
   }
-  if (rest === "/delivery:select" && method === "POST") {
+  if (rest === "/delivery-selection" && method === "PUT") {
     const offerId = str(body["offerId"]);
     const groupNo = Number(body["groupNo"]);
     const offers = view(cart).deliveryQuote?.groups.find((g) => g.groupNo === groupNo)?.offers ?? [];

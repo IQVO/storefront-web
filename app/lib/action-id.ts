@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 
 /**
- * One X-Action-Id per user action: the same click retried reuses the id, so the BFF's
+ * One Idempotency-Key per user action: the same click retried reuses the id, so the BFF's
  * minted Idempotency-Key deduplicates it. Call reset() once the action succeeded.
  */
 export function useActionId(): { current: () => string; reset: () => void } {

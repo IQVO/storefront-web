@@ -19,9 +19,9 @@ export class ApiError extends Error {
 }
 
 export interface CallOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
-  actionId?: string;
+  idempotencyKey?: string;
   signal?: AbortSignal;
   /** Server-side rendering only: an absolute base plus the forwarded cookie. */
   base?: string;
@@ -48,15 +48,22 @@ function parseProblem(text: string): Problem | null {
 export async function callRaw<T>(path: string, o: CallOptions = {}): Promise<CallResult<T>> {
   const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   if (o.body !== undefined) headers["Content-Type"] = "application/json";
-  if (o.actionId) headers["X-Action-Id"] = o.actionId;
+  const method = o.method ?? "GET";
+  // Every POST and PATCH carries an Idempotency-Key: the caller's per-action key (reused on retry), else a fresh one.
+  if (method === "POST" || method === "PATCH") headers["Idempotency-Key"] = o.idempotencyKey ?? crypto.randomUUID();
   if (o.cookie) headers["Cookie"] = o.cookie;
   const doFetch = o.fetchImpl ?? fetch;
-  const init: RequestInit = { method: o.method ?? "GET", headers, credentials: "same-origin" };
+  const init: RequestInit = { method, headers, credentials: "same-origin" };
   if (o.body !== undefined) init.body = JSON.stringify(o.body);
   if (o.signal) init.signal = o.signal;
   const res = await doFetch(`${o.base ?? API_BASE}${path}`, init);
   const text = await res.text();
-  if (!res.ok) throw new ApiError(res.status, parseProblem(text));
+  if (!res.ok) {
+    const err = new ApiError(res.status, parseProblem(text));
+    // 409 idempotency-key-reused is a bug in the page (one key reused for a different request), never retried.
+    if (res.status === 409 && err.slug === "idempotency-key-reused") console.error("idempotency-key-reused: a key was reused for a different request", method, path);
+    throw err;
+  }
   const data = (text ? JSON.parse(text) : null) as T;
   return { status: res.status, data, setCookie: res.headers.getSetCookie?.() ?? [] };
 }

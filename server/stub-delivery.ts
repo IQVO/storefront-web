@@ -40,7 +40,7 @@ export const isServed = (prefix: string): boolean => SERVED_PREFIXES.has(prefix)
 
 export const notServed = () => TIERS.map((tier) => ({ tier, constraint: "DESTINATION_NOT_SERVED" }));
 
-/** POST /products/{id}:delivery-dates tiers: instants in the destination's zone, charges and free-over thresholds. */
+/** POST /products/{id}/delivery-date-quotes tiers: instants in the destination's zone, charges and free-over thresholds. */
 export function productTiers(now: number) {
   return OFFERED.map((t) => ({
     tier: t.tier,

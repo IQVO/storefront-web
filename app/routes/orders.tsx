@@ -8,9 +8,9 @@ import { tierLabel } from "~/lib/promise.ts";
 import { listOrders } from "~/lib/queries.ts";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const after = new URL(request.url).searchParams.get("after") ?? undefined;
+  const cursor = new URL(request.url).searchParams.get("cursor") ?? undefined;
   try {
-    return { orders: await listOrders(after), signedOut: false };
+    return { orders: await listOrders(cursor), signedOut: false };
   } catch (e) {
     if (e instanceof ApiError && (e.status === 422 || e.status === 404)) return { orders: null, signedOut: true };
     throw e;
@@ -62,7 +62,7 @@ export default function Orders({ loaderData }: Route.ComponentProps) {
           })}
         </ul>
       )}
-      {orders.nextCursor && <p><Link className="btn btn-secondary" to={`/orders?after=${encodeURIComponent(orders.nextCursor)}`}>Older orders</Link></p>}
+      {orders.nextCursor && <p><Link className="btn btn-secondary" to={`/orders?cursor=${encodeURIComponent(orders.nextCursor)}`}>Older orders</Link></p>}
     </section>
   );
 }

@@ -67,6 +67,11 @@ const sidebars: SidebarsConfig = {
           label: '0006 Promise windows are shown in the destination\'s time zone',
           href: '/docs/adr/0006-promise-windows-in-the-destination-time-zone',
         },
+        {
+          type: 'link',
+          label: '0007 Adopt the fleet REST API guideline',
+          href: '/docs/adr/0007-adopt-the-fleet-rest-api-guideline',
+        },
       ],
     },
   ],

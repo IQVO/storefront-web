@@ -12,7 +12,7 @@ changes with wherever the page is rendered. Until now the web hard-coded `Americ
 which is right for today's service areas only.
 
 delivery-promise now sends an optional IANA `timeZone` next to each window; storefront-bff passes it through on
-`POST /products/{id}:delivery-dates` tiers and customer-ordering exposes it on order groups (and tracking groups).
+`POST /products/{id}/delivery-date-quotes` tiers and customer-ordering exposes it on order groups (and tracking groups).
 It is absent only for rows stored before, which the network reads as UTC.
 
 ## Decision
