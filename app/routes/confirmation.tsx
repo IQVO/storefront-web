@@ -3,6 +3,7 @@ import { Link, useRevalidator } from "react-router";
 import type { Route } from "./+types/confirmation";
 import { CheckIcon } from "~/components/Icons.tsx";
 import { isInDoubt, reviewGroups } from "~/lib/checkout.ts";
+import { optional } from "~/lib/api.ts";
 import { arriving } from "~/lib/dates.ts";
 import { formatMinor } from "~/lib/money.ts";
 import { tierLabel } from "~/lib/promise.ts";
@@ -19,8 +20,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const session = await getCheckout(params.sessionId);
   if (session.state !== "COMPLETED") return { session, order: null, cart: null };
   const [order, cart] = await Promise.all([
-    session.orderId ? getOrder(session.orderId).catch(() => null) : Promise.resolve(null),
-    getCart(session.cartId).catch(() => null),
+    session.orderId ? optional(getOrder(session.orderId)) : Promise.resolve(null),
+    optional(getCart(session.cartId)),
   ]);
   return { session, order, cart };
 }
