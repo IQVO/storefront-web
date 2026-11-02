@@ -12,13 +12,13 @@ describe("api", () => {
     expect(API_BASE).toBe("/api/storefront");
   });
 
-  it("sends JSON body, action id and forwarded cookie", async () => {
+  it("sends JSON body, idempotency key and forwarded cookie", async () => {
     const f = vi.fn().mockResolvedValue(json({}, { status: 201 }));
-    const r = await callRaw("/carts", { method: "POST", body: { a: 1 }, actionId: "act-1", cookie: "sf_state=c%3D1", base: "http://bff.test/api/storefront", fetchImpl: f });
+    const r = await callRaw("/carts", { method: "POST", body: { a: 1 }, idempotencyKey: "act-1", cookie: "sf_state=c%3D1", base: "http://bff.test/api/storefront", fetchImpl: f });
     const [url, init] = f.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://bff.test/api/storefront/carts");
     expect(init.body).toBe('{"a":1}');
-    expect(init.headers).toMatchObject({ "Content-Type": "application/json", "X-Action-Id": "act-1", Cookie: "sf_state=c%3D1" });
+    expect(init.headers).toMatchObject({ "Content-Type": "application/json", "Idempotency-Key": "act-1", Cookie: "sf_state=c%3D1" });
     expect(r.status).toBe(201);
   });
 

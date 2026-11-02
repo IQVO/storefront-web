@@ -60,14 +60,14 @@ A failure anywhere in the async handler answers a bare 500.
 | Route | Module | Data loading | BFF calls (`app/lib/queries.ts`) |
 |---|---|---|---|
 | `/` (index) | `routes/home.tsx` | server `loader`, `Cache-Control: private, max-age=0, must-revalidate` | `GET /categories`, then up to four `GET /products?categoryId=&limit=6` in parallel (the busiest departments); without a category tree one `GET /products?limit=48` grouped by department |
-| `/search` | `routes/search.tsx` | server `loader` | `GET /products` with `q`, `categoryId`, `inStock`, `priceMin`, `priceMax`, `sort`, `after`, `limit` from the URL |
-| `/products/:id` | `routes/product.tsx` | server `loader` (404 from the BFF becomes a 404 page) | `GET /products/{id}`; the buy box then calls `POST /products/{id}:delivery-dates` in the browser |
-| `/cart` | `routes/cart.tsx` | `clientLoader` + `clientAction` | cart read, line quantity and removal, destination, `delivery:quote`, `delivery:select`, product titles, delivery dates for charges |
+| `/search` | `routes/search.tsx` | server `loader` | `GET /products` with `q`, `categoryId`, `inStock`, `priceMin`, `priceMax`, `sort`, `cursor`, `limit` from the URL |
+| `/products/:id` | `routes/product.tsx` | server `loader` (404 from the BFF becomes a 404 page) | `GET /products/{id}`; the buy box then calls `POST /products/{id}/delivery-date-quotes` in the browser |
+| `/cart` | `routes/cart.tsx` | `clientLoader` + `clientAction` | cart read, line quantity and removal, destination, `delivery-quotes`, `delivery-selection`, product titles, delivery dates for charges |
 | `/account` | `routes/account.tsx` | `clientLoader` + `clientAction` | `GET /me`, `POST /sessions`, `POST /shoppers`, `POST /me/addresses` |
-| `/checkout` | `routes/checkout.tsx` | `clientLoader` (redirects to `/account` without a shopper, to `/cart` when the cart is not ready) + `clientAction` (`open`, `confirm`) | `POST /checkout`, `GET /checkout/{id}`, `POST /checkout/{id}:confirm`, cart and product reads |
+| `/checkout` | `routes/checkout.tsx` | `clientLoader` (redirects to `/account` without a shopper, to `/cart` when the cart is not ready) + `clientAction` (`open`, `confirm`) | `POST /checkout`, `GET /checkout/{id}`, `POST /checkout/{id}/confirmations`, cart and product reads |
 | `/confirmation/:sessionId` | `routes/confirmation.tsx` | `clientLoader`; polls by revalidating every 2 s up to 30 times while the session is `PLACING` or `AUTHORIZING` | `GET /checkout/{id}`, then `GET /orders/{id}` and `GET /carts/{id}` once `COMPLETED` |
 | `/orders` | `routes/orders.tsx` | `clientLoader` | `GET /orders` |
-| `/orders/:id` | `routes/order-detail.tsx` | `clientLoader` + `clientAction` (cancel) | `GET /orders/{id}`, product reads, `POST /orders/{id}:cancel` |
+| `/orders/:id` | `routes/order-detail.tsx` | `clientLoader` + `clientAction` (cancel) | `GET /orders/{id}`, product reads, `POST /orders/{id}/cancellations` |
 
 The root route (`app/root.tsx`) also has a server `loader`: it fetches `GET /categories` (failure tolerated) for the department bar and reads the `sf_dest` cookie, and `shouldRevalidate` returns `false` so it runs once per document. The root `ErrorBoundary` turns a route error response or an `ApiError` into a shopper-facing message.
 
@@ -75,10 +75,10 @@ Source: `app/routes.ts`, `app/routes/*.tsx`, `app/root.tsx`.
 
 ## The BFF client
 
-- `app/lib/api.ts` is the **only** place that knows a backend base: `API_BASE = "/api/storefront"`. `callRaw`/`call` send `Accept: application/json, application/problem+json`, `Content-Type: application/json` when there is a body, `X-Action-Id` when an action id is given, and `credentials: "same-origin"`. A non-2xx answer throws `ApiError` carrying the RFC 9457 problem; `ApiError.slug` is the last segment of the problem type (for example `session-required`).
+- `app/lib/api.ts` is the **only** place that knows a backend base: `API_BASE = "/api/storefront"`. `callRaw`/`call` send `Accept: application/json, application/problem+json`, `Content-Type: application/json` when there is a body, `Idempotency-Key` on every POST and PATCH (the caller's per-action key, else a fresh UUID), and `credentials: "same-origin"`. A non-2xx answer throws `ApiError` carrying the RFC 9457 problem; `ApiError.slug` is the last segment of the problem type (for example `session-required`).
 - `app/lib/queries.ts` has one one-liner per BFF operation (23 operations, listed on [Integration](../ecosystem/integration.md)). Path segments go through `seg()` (URL-encoded) and query strings through `query()` (empty values dropped).
 - `app/lib/api.server.ts` is a `.server` module, excluded from the client bundle by React Router. `serverBase()` returns `<BFF_URL>/api/storefront`; `serverOpts(request)` adds the incoming `Cookie` header and the request's abort signal for SSR loader calls.
-- `app/lib/action-id.ts` mints one `X-Action-Id` per user action: the same click retried reuses it (so the BFF's idempotency key deduplicates), and it is renewed after success.
+- `app/lib/action-id.ts` mints one `Idempotency-Key` value per user action: the same click retried reuses it (so the BFF deduplicates), and it is renewed after success.
 - `app/components/ProblemAlert.tsx` maps stable problem slugs (`session-required`, `cancel-after-lock`, `payment-declined`, `stale-delivery-selection`) and 503/504 to shopper-facing text; route actions never throw to the boundary (`guarded` in `app/lib/action-result.ts`).
 
 Source: `app/lib/api.ts`, `app/lib/queries.ts`, `app/lib/api.server.ts`, `app/lib/action-id.ts`, `app/components/ProblemAlert.tsx`.

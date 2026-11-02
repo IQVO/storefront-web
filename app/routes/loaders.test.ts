@@ -38,7 +38,7 @@ describe("SSR loaders", () => {
 
   it("home shows department cards and one popular row per busiest department, with the forwarded cookie", async () => {
     vi.mocked(q.listCategories).mockResolvedValue(tree);
-    vi.mocked(q.searchProducts).mockImplementation(async (p) => ({ hits: [hit(`${p.categoryId}-1`, ["X"])], facets: [] }));
+    vi.mocked(q.searchProducts).mockImplementation(async (p) => ({ items: [hit(`${p.categoryId}-1`, ["X"])], facets: [] }));
     const out = await homeLoader({ request: req("/") } as HomeRoute.LoaderArgs);
     expect(out.departments.map((d) => [d.name, d.count, d.image])).toEqual([["Kitchen & Dining", 9, "/media/departments/kitchen-dining.svg"], ["Bed & Bath", 2, "/media/departments/bed-bath.svg"]]);
     expect(out.rows.map((r) => r.title)).toEqual(["Kitchen & Dining", "Bed & Bath"]);
@@ -50,14 +50,14 @@ describe("SSR loaders", () => {
 
   it("home falls back to rows grouped by the hits' department when the tree is unavailable", async () => {
     vi.mocked(q.listCategories).mockRejectedValue(notFound);
-    vi.mocked(q.searchProducts).mockResolvedValue({ hits: [hit("a", ["Jewelry", "Rings"]), hit("b", ["Electronics"]), hit("c", ["Jewelry"]), hit("d", [])], facets: [] });
+    vi.mocked(q.searchProducts).mockResolvedValue({ items: [hit("a", ["Jewelry", "Rings"]), hit("b", ["Electronics"]), hit("c", ["Jewelry"]), hit("d", [])], facets: [] });
     const out = await homeLoader({ request: req("/") } as HomeRoute.LoaderArgs);
     expect(out.departments).toEqual([]);
     expect(out.rows.map((r) => [r.title, r.hits.length])).toEqual([["Jewelry", 2], ["Electronics", 1], ["Featured", 1]]);
   });
 
   it("search passes the validated filters, the category id included, and the display offset", async () => {
-    vi.mocked(q.searchProducts).mockResolvedValue({ hits: [], facets: [] });
+    vi.mocked(q.searchProducts).mockResolvedValue({ items: [], facets: [] });
     const out = await searchLoader({ request: req("/search?q=mug&sort=title&categoryId=cat-k&from=24") } as SearchRoute.LoaderArgs);
     expect(vi.mocked(q.searchProducts).mock.calls[0]?.[0]).toMatchObject({ q: "mug", sort: "title", categoryId: "cat-k", limit: 24 });
     expect(out.offset).toBe(24);

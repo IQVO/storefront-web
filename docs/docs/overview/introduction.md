@@ -32,7 +32,7 @@ This is a domain-driven-design study. It is not associated with any company; pay
 ## What it does NOT own
 
 - **No business rules and no data.** Prices, stock, carts, checkout state, payments and orders belong to the storefront contexts and to the retail network behind the BFF. The web renders what the BFF answers and relays commands.
-- **No ids.** Cart, session, order and address ids come from BFF answers. The only value the app generates is `X-Action-Id`, a random per-click token that lets the BFF deduplicate a retried click (ADR 0002).
+- **No ids.** Cart, session, order and address ids come from BFF answers. The only value the app generates is `Idempotency-Key`, a random per-click token that lets the BFF deduplicate a retried click (ADR 0002, ADR 0007).
 - **No authentication.** Sign-in is a synthetic lookup by e-mail (`POST /sessions`) and registration (`POST /shoppers`); the `sf_state` cookie carries state, not credentials.
 - **No personal data at rest.** Addresses are typed into forms and posted to the BFF untouched; the browser stores only opaque ids (`sf.cartId`, `sf.shopperId`, `sf.checkoutId`) and the ZIP with its prefix in `sf_dest`.
 - **No card data.** The "payment fields" are an inert widget; the only thing posted is a scenario token (`tok_approve`, `tok_decline`, `tok_timeout`).

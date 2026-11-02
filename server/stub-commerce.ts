@@ -32,7 +32,7 @@ export function checkoutRoutes(ctx: Ctx): Reply | null {
     ctx.setState.k = s.sessionId;
     return ok(session(s), 201);
   }
-  const m = /^\/checkout\/([^/:]+)(:confirm)?$/.exec(path);
+  const m = /^\/checkout\/([^/]+)(\/confirmations)?$/.exec(path);
   if (!m) return null;
   const s = store.sessions.get(decodeURIComponent(m[1] ?? ""));
   if (!s) return problem(404, "not-found", "Checkout session not found");
@@ -88,7 +88,7 @@ export function orderRoutes(ctx: Ctx): Reply | null {
     if (!shopper) return needShopper();
     return ok({ items: [...store.orders.values()].filter((o) => o.shopperId === shopper).reverse().map(view) });
   }
-  const m = /^\/orders\/([^/:]+)(:cancel)?$/.exec(path);
+  const m = /^\/orders\/([^/]+)(\/cancellations)?$/.exec(path);
   if (!m) return null;
   const o = store.orders.get(decodeURIComponent(m[1] ?? ""));
   if (!o) return problem(404, "not-found", "Order not found");

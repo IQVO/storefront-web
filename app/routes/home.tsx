@@ -27,10 +27,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (depts.length > 0) {
     const busiest = [...depts].sort((a, b) => b.purchasableCount - a.purchasableCount).slice(0, ROWS);
     rows = await Promise.all(
-      busiest.map(async (d) => ({ title: d.name, categoryId: d.categoryId, hits: (await searchProducts({ categoryId: d.categoryId, limit: PER_ROW }, opts)).hits })),
+      busiest.map(async (d) => ({ title: d.name, categoryId: d.categoryId, hits: (await searchProducts({ categoryId: d.categoryId, limit: PER_ROW }, opts)).items })),
     );
   } else {
-    const { hits } = await searchProducts({ limit: 48 }, opts);
+    const { items: hits } = await searchProducts({ limit: 48 }, opts);
     const byDept = new Map<string, ProductHit[]>();
     for (const h of hits) {
       const name = h.categoryPath?.[0] ?? "Featured";

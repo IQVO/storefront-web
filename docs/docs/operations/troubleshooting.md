@@ -87,7 +87,7 @@ Each entry is a symptom, the cause in code, how to check it and the fix. The dep
 ### "This item cannot be delivered to ZIP `<zip>` yet."
 
 - **Cause**: the delivery network serves only some 3-character postal prefixes. The web sends `postalPrefixOf(zip)` (`app/lib/destination.ts`), never the full ZIP, and the BFF answers `unavailable: DESTINATION_NOT_SERVED` (`app/components/DeliveryPromise.tsx`). In the stub only prefixes 786 and 787 are served.
-- **Check**: the request body of `POST /products/{id}:delivery-dates` must be `{ "postalPrefix": "787" }`; the cart destination body must be `{ "destinationPostalPrefix": "787" }`.
+- **Check**: the request body of `POST /products/{id}/delivery-date-quotes` must be `{ "postalPrefix": "787" }`; the cart destination body must be `{ "destinationPostalPrefix": "787" }`.
 - **Fix**: a different ZIP, or enable the area in the delivery network. If every ZIP is refused, the full ZIP is being sent: that regression has happened before (see `INCIDENTS.md`).
 
 ### 400 `json: unknown field "..."` from a BFF call
@@ -97,7 +97,7 @@ Each entry is a symptom, the cause in code, how to check it and the fix. The dep
 
 ### Delivery dates are "unavailable right now"
 
-- **Cause**: the client-side `POST /products/{id}:delivery-dates` failed (`DeliveryPromise` catches every error and shows that text). It never blocks the product page, which renders without it.
+- **Cause**: the client-side `POST /products/{id}/delivery-date-quotes` failed (`DeliveryPromise` catches every error and shows that text). It never blocks the product page, which renders without it.
 - **Fix**: check the BFF and the delivery-promise service behind it.
 
 ### The department bar only shows "All" and facets show category names oddly

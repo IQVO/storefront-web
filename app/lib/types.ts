@@ -54,10 +54,10 @@ export interface CategorySuggestion {
 }
 
 export interface ProductSearchResult {
-  hits: ProductHit[];
+  items: ProductHit[];
   facets: Facet[];
   categorySuggestions?: CategorySuggestion[];
-  next?: string | null;
+  nextCursor?: string;
 }
 
 export interface ProductView {
