@@ -1,9 +1,14 @@
 import { call, query, seg, type CallOptions } from "./api.ts";
 import type {
+  CancelOrderRequest,
   Cart,
   CategoryList,
   CheckoutSession,
+  ConfirmCheckoutRequest,
+  CreateSessionRequest,
   DeliveryDates,
+  DeliveryDatesRequest,
+  OpenCheckoutRequest,
   Order,
   OrderList,
   ProductSearchResult,
@@ -27,7 +32,7 @@ export const searchProducts = (p: SearchParams, o?: CallOptions) =>
 export const getProduct = (id: string, o?: CallOptions) => call<ProductView>(`/products/${seg(id)}`, o);
 export const listCategories = (o?: CallOptions) => call<CategoryList>("/categories", o);
 export const quoteDeliveryDates = (id: string, postalPrefix: string, o?: CallOptions) =>
-  call<DeliveryDates>(`/products/${seg(id)}/delivery-date-quotes`, { ...o, method: "POST", body: { postalPrefix } });
+  call<DeliveryDates>(`/products/${seg(id)}/delivery-date-quotes`, { ...o, method: "POST", body: { postalPrefix } satisfies DeliveryDatesRequest });
 
 export const createCart = (actionId?: string) =>
   call<Cart>("/carts", { method: "POST", ...(actionId ? { idempotencyKey: actionId } : {}) });
@@ -51,23 +56,24 @@ export const selectCartDelivery = (id: string, groupNo: number, offerId: string,
 export const openCheckout = (shipToAddressId: string, cartId?: string, actionId?: string) =>
   call<CheckoutSession>("/checkout", {
     method: "POST",
-    body: { shipToAddressId, ...(cartId ? { cartId } : {}) },
+    body: { shipToAddressId, ...(cartId ? { cartId } : {}) } satisfies OpenCheckoutRequest,
     ...(actionId ? { idempotencyKey: actionId } : {}),
   });
 export const getCheckout = (id: string) => call<CheckoutSession>(`/checkout/${seg(id)}`);
 export const confirmCheckout = (id: string, paymentMethodToken: string, actionId?: string) =>
   call<CheckoutSession>(`/checkout/${seg(id)}/confirmations`, {
     method: "POST",
-    body: { paymentMethodToken },
+    body: { paymentMethodToken } satisfies ConfirmCheckoutRequest,
     ...(actionId ? { idempotencyKey: actionId } : {}),
   });
 
 export const listOrders = (cursor?: string) => call<OrderList>(`/orders${query({ cursor })}`);
 export const getOrder = (id: string) => call<Order>(`/orders/${seg(id)}`);
 export const cancelOrder = (id: string, reason: string, actionId?: string) =>
-  call<Order>(`/orders/${seg(id)}/cancellations`, { method: "POST", body: { reason }, ...(actionId ? { idempotencyKey: actionId } : {}) });
+  call<Order>(`/orders/${seg(id)}/cancellations`, { method: "POST", body: { reason } satisfies CancelOrderRequest, ...(actionId ? { idempotencyKey: actionId } : {}) });
 
-export const createSession = (email: string) => call<Shopper>("/sessions", { method: "POST", body: { email } });
+export const createSession = (email: string) =>
+  call<Shopper>("/sessions", { method: "POST", body: { email } satisfies CreateSessionRequest });
 export const registerShopper = (body: unknown, actionId?: string) =>
   call<Shopper>("/shoppers", { method: "POST", body, ...(actionId ? { idempotencyKey: actionId } : {}) });
 export const getMe = () => call<Shopper>("/me");
