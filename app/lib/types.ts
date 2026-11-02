@@ -1,7 +1,14 @@
 // Shapes of the BFF answers the pages use. The BFF relays upstream documents unchanged
 // (apis/openapi.yaml of storefront-bff), so these mirror the upstream contracts.
+//
+// Types the BFF spec spells out exactly (problems, request bodies, the tier enum) are
+// sourced from the contract itself: app/lib/api-schema.ts, generated from the spec
+// snapshot openapi/storefront-bff.yaml (npm run gen:api; CI fails on drift). The
+// response documents the spec deliberately leaves opaque (Passthrough) stay here,
+// mirroring the upstream contracts the pages consume.
+import type { components } from "./api-schema.ts";
 
-export type Tier = "SAME_DAY" | "NEXT_DAY" | "TWO_DAY" | "STANDARD";
+export type Tier = components["schemas"]["DeliveryDates"]["tiers"][number]["tier"];
 
 export interface Money {
   amountMinor: number;
@@ -54,10 +61,10 @@ export interface CategorySuggestion {
 }
 
 export interface ProductSearchResult {
-  hits: ProductHit[];
+  items: ProductHit[];
   facets: Facet[];
   categorySuggestions?: CategorySuggestion[];
-  next?: string | null;
+  nextCursor?: string;
 }
 
 export interface ProductView {
@@ -227,9 +234,11 @@ export interface OrderList {
   nextCursor?: string;
 }
 
-export interface Problem {
-  type: string;
-  title: string;
-  status: number;
-  detail?: string;
-}
+export type Problem = components["schemas"]["Problem"];
+
+// Request bodies the BFF validates with additionalProperties: false — typed by the contract.
+export type DeliveryDatesRequest = components["schemas"]["DeliveryDatesRequest"];
+export type OpenCheckoutRequest = components["schemas"]["OpenCheckoutRequest"];
+export type ConfirmCheckoutRequest = components["schemas"]["ConfirmCheckoutRequest"];
+export type CancelOrderRequest = components["schemas"]["CancelOrderRequest"];
+export type CreateSessionRequest = components["schemas"]["CreateSessionRequest"];

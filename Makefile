@@ -21,8 +21,15 @@ e2e: ## Playwright journeys; E2E_BASE_URL=... runs them against a real BFF inste
 lighthouse: build ## Lighthouse CI budgets (mobile then desktop), served with the stub BFF
 	npm run lhci
 	LHCI_FORM_FACTOR=desktop npm run lhci
-check: lint typecheck test build
+check: lint typecheck test build check-api
 check-all: lint typecheck coverage bundle-check e2e
+
+# --- OpenAPI types (storefront-bff contract) -------------------------------
+.PHONY: check-api gen-api
+check-api: ## fail when app/lib/api-schema.ts drifts from the committed BFF spec snapshot
+	npm run check:api
+gen-api: ## regenerate app/lib/api-schema.ts from openapi/storefront-bff.yaml
+	npm run gen:api
 
 # --- agent harness (harness-template v3) -----------------------------------
 .PHONY: check-fast guide-lint harness-test

@@ -151,7 +151,7 @@ describe("orders pages", () => {
     expect(screen.getByText("Shipped")).toBeInTheDocument();
     expect(screen.getByText("Arriving Oct 31 – Nov 1")).toBeInTheDocument();
     expect(screen.getByText("$54.13")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Older orders" })).toHaveAttribute("href", "/orders?after=n1");
+    expect(screen.getByRole("link", { name: "Older orders" })).toHaveAttribute("href", "/orders?cursor=n1");
   });
   it("shows the promise, the tracker and cancel before shipment", () => {
     const tracking = { orderId: "ord-1", status: "PLACED", groups: [{ groupNo: 1, status: "SHIPPED", deliverByEarliest: "2026-10-31T19:00:00Z", deliverByLatest: "2026-11-01T23:00:00Z", atRiskReason: "weather", packages: [{ trackingNumber: "TRK1", carrier: "Carrier", state: "OUT_FOR_DELIVERY" }] }] };

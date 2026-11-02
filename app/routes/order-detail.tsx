@@ -2,6 +2,7 @@ import { Form, Link, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/order-detail";
 import { useRenewedActionId } from "~/lib/action-id.ts";
 import { guarded, formString, type ActionResult } from "~/lib/action-result.ts";
+import { optional } from "~/lib/api.ts";
 import { arriving, formatPlaced } from "~/lib/dates.ts";
 import { formatMinor } from "~/lib/money.ts";
 import { TRACK_STEPS, canRequestCancel, statusLabel, trackStep } from "~/lib/order-status.ts";
@@ -12,7 +13,7 @@ import type { Order, ProductView, TrackingGroup } from "~/lib/types.ts";
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const order = await getOrder(params.id);
   const products: Record<string, ProductView | null> = {};
-  await Promise.all([...new Set(order.lines.map((l) => l.catalogItemId))].map(async (id) => (products[id] = await getProduct(id).catch(() => null))));
+  await Promise.all([...new Set(order.lines.map((l) => l.catalogItemId))].map(async (id) => (products[id] = await optional(getProduct(id)))));
   return { order, products };
 }
 

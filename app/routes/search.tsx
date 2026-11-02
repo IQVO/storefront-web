@@ -24,11 +24,11 @@ export default function Search({ loaderData }: Route.ComponentProps) {
   const nav = useNavigation();
   const submit = useSubmit();
   const root = useRouteLoaderData<typeof rootLoader>("root");
-  const names = categoryNames(root?.categories, result.hits);
+  const names = categoryNames(root?.categories, result.items);
   const cats = facetValues(result.facets, "category");
   const bands = facetValues(result.facets, "price-band").map((v) => ({ ...v, band: priceBand(v.value) })).filter((v) => v.band);
   const stock = facetValues(result.facets, "in-stock");
-  const total = stock.length > 0 ? stock.reduce((n, v) => n + v.count, 0) : offset + result.hits.length;
+  const total = stock.length > 0 ? stock.reduce((n, v) => n + v.count, 0) : offset + result.items.length;
   const nameOf = (id: string) => names.get(id) ?? id;
   const scope = params.q ? <> for <span className="results-q">&ldquo;{params.q}&rdquo;</span></> : params.categoryId ? <> in <span className="results-q">{nameOf(params.categoryId)}</span></> : null;
   const bandActive = (b: { priceMin?: number; priceMax?: number }) => b.priceMin === params.priceMin && b.priceMax === params.priceMax;
@@ -37,7 +37,7 @@ export default function Search({ loaderData }: Route.ComponentProps) {
     <div className="search-page">
       <div className="results-bar">
         <p className="results-count" role="status">
-          {result.hits.length === 0 ? "No results" : `${offset + 1}-${offset + result.hits.length} of ${total} results`}
+          {result.items.length === 0 ? "No results" : `${offset + 1}-${offset + result.items.length} of ${total} results`}
           {scope}
         </p>
         <Form method="get" action="/search" className="sort-form" onChange={(e) => submit(e.currentTarget)}>
@@ -96,14 +96,14 @@ export default function Search({ loaderData }: Route.ComponentProps) {
         </aside>
         <section aria-labelledby="results-h" aria-busy={nav.state === "loading"} className="results">
           <h1 id="results-h" className="results-h">{params.q ? "Results" : params.categoryId ? nameOf(params.categoryId) : "All products"}</h1>
-          {result.hits.length === 0 ? (
+          {result.items.length === 0 ? (
             <p className="panel">No products matched. Try a different search or remove a filter.</p>
           ) : (
-            <ul className="tile-grid">{result.hits.map((h, i) => <ProductCard key={h.catalogItemId} hit={h} priority={i < 4} />)}</ul>
+            <ul className="tile-grid">{result.items.map((h, i) => <ProductCard key={h.catalogItemId} hit={h} priority={i < 4} />)}</ul>
           )}
-          {result.next && (
+          {result.nextCursor && (
             <p className="pager">
-              <Link className="btn btn-secondary" to={searchHref(params, { after: result.next, from: offset + PAGE_SIZE })}>Next page</Link>
+              <Link className="btn btn-secondary" to={searchHref(params, { cursor: result.nextCursor, from: offset + PAGE_SIZE })}>Next page</Link>
             </p>
           )}
         </section>

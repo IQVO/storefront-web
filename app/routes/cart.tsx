@@ -5,6 +5,7 @@ import { Price } from "~/components/Price.tsx";
 import { useSession } from "~/components/Session.tsx";
 import { useActionId } from "~/lib/action-id.ts";
 import { guarded, formString, type ActionResult } from "~/lib/action-result.ts";
+import { optional } from "~/lib/api.ts";
 import { announceCartChanged } from "~/lib/cart-events.ts";
 import { currentCart, lineCount } from "~/lib/cart-session.ts";
 import { arriving } from "~/lib/dates.ts";
@@ -23,9 +24,9 @@ export async function clientLoader() {
   // The quote's offers carry no charge: the tiers' charges and free-over thresholds come from the
   // network's delivery dates for the destination (best effort, shown on the delivery radio cards).
   const [schedule] = await Promise.all([
-    first && cart?.destinationPostalPrefix ? quoteDeliveryDates(first.catalogItemId, cart.destinationPostalPrefix).catch(() => null) : Promise.resolve(null),
+    first && cart?.destinationPostalPrefix ? optional(quoteDeliveryDates(first.catalogItemId, cart.destinationPostalPrefix)) : Promise.resolve(null),
     ...(cart?.lines ?? []).map(async (l) => {
-      products[l.catalogItemId] = await getProduct(l.catalogItemId).catch(() => null);
+      products[l.catalogItemId] = await optional(getProduct(l.catalogItemId));
     }),
   ]);
   return { cart, products, schedule: (schedule ?? null) as DeliveryDates | null };

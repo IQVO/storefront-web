@@ -24,7 +24,7 @@ export function paramsFromUrl(url: URL): SearchParams {
     priceMin: num("priceMin"),
     priceMax: num("priceMax"),
     sort: SORTS.find((s) => s.id === sort)?.id,
-    after: g("after"),
+    cursor: g("cursor"),
     limit: PAGE_SIZE,
   };
 }

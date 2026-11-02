@@ -25,6 +25,7 @@
     "**/*.spec.ts",
     "**/*.spec.tsx",
     "**/*.d.ts",
+    "app/lib/api-schema.ts",
     "e2e/**",
     "**/__tests__/**",
     "docs/**",

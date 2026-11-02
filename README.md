@@ -15,7 +15,7 @@ This project is a domain-driven design study. It is not associated with, endorse
 
 ## Documentation
 
-The documentation site is published at <https://iqvo.github.io/storefront-web/> (source in `docs/`, built by the `Docs` workflow). Decisions live in [`docs/adr/`](docs/adr) (6 ADRs, indexed on the site).
+The documentation site is published at <https://iqvo.github.io/storefront-web/> (source in `docs/`, built by the `Docs` workflow). Decisions live in [`docs/adr/`](docs/adr) (7 ADRs, indexed on the site).
 
 | Page | What it covers |
 |---|---|
@@ -27,7 +27,7 @@ The documentation site is published at <https://iqvo.github.io/storefront-web/> 
 | [Troubleshooting](https://iqvo.github.io/storefront-web/docs/operations/troubleshooting) | symptom, cause, check, fix for the server, shopper flows and CI sensors |
 | [Testing](https://iqvo.github.io/storefront-web/docs/development/testing) | vitest, stub BFF, Playwright journeys, bundle sensor, Lighthouse budgets, CI jobs |
 | [Integration](https://iqvo.github.io/storefront-web/docs/ecosystem/integration) | the storefront-bff routes it calls and how each failure surfaces |
-| [ADR index](https://iqvo.github.io/storefront-web/docs/adr) | the six architecture decision records |
+| [ADR index](https://iqvo.github.io/storefront-web/docs/adr) | the seven architecture decision records |
 
 The storefront section of warehouse-docs places this app in the wider model:
 <https://iqvo.github.io/warehouse-docs/storefront/>.
@@ -143,7 +143,7 @@ See `HARNESS.md`.
 
 ## Architecture Decision Records
 
-Six ADRs live in [`docs/adr/`](docs/adr/):
+Seven ADRs live in [`docs/adr/`](docs/adr/):
 
 - [0001 — React Router 7 framework SSR](docs/adr/0001-react-router-7-framework-ssr.md)
 - [0002 — BFF-only API access and the state cookie](docs/adr/0002-bff-only-and-state-cookie.md)
@@ -151,3 +151,4 @@ Six ADRs live in [`docs/adr/`](docs/adr/):
 - [0004 — simulated payment fields](docs/adr/0004-simulated-payment-fields.md)
 - [0005 — CI sensors and the stub BFF](docs/adr/0005-ci-sensors-and-stub-bff.md)
 - [0006 — promise windows in the destination's time zone](docs/adr/0006-promise-windows-in-the-destination-time-zone.md)
+- [0007 — adopt the fleet REST API guideline](docs/adr/0007-adopt-the-fleet-rest-api-guideline.md)

@@ -57,12 +57,14 @@ describe("client loaders", () => {
     vi.mocked(q.getMe).mockResolvedValueOnce(shopper);
     expect(await run(accountLoader)).toEqual({ shopper });
   });
-  it("cart loader fetches product details and the tier charges for the destination, tolerating failures", async () => {
+  it("cart loader fetches product details and the tier charges for the destination, tolerating only 404s", async () => {
     vi.mocked(cartSession.currentCart).mockResolvedValue(readyCart);
     vi.mocked(q.getProduct).mockRejectedValue(err(404));
     vi.mocked(q.quoteDeliveryDates).mockRejectedValue(err(503));
-    expect(await run(cartLoader)).toEqual({ cart: readyCart, products: { i1: null }, schedule: null });
+    await expect(run(cartLoader)).rejects.toBeInstanceOf(ApiError);
     expect(q.quoteDeliveryDates).toHaveBeenCalledWith("i1", "787");
+    vi.mocked(q.quoteDeliveryDates).mockRejectedValue(err(404));
+    expect(await run(cartLoader)).toEqual({ cart: readyCart, products: { i1: null }, schedule: null });
     vi.mocked(cartSession.currentCart).mockResolvedValue(null);
     expect(await run(cartLoader)).toEqual({ cart: null, products: {}, schedule: null });
   });
@@ -70,7 +72,7 @@ describe("client loaders", () => {
     vi.mocked(q.listOrders).mockRejectedValueOnce(err(422, "session-required"));
     expect(await run(ordersLoader, { request: new Request("http://w.test/orders") })).toEqual({ orders: null, signedOut: true });
     vi.mocked(q.listOrders).mockResolvedValueOnce({ items: [] });
-    await run(ordersLoader, { request: new Request("http://w.test/orders?after=n1") });
+    await run(ordersLoader, { request: new Request("http://w.test/orders?cursor=n1") });
     expect(q.listOrders).toHaveBeenLastCalledWith("n1");
   });
   it("order loader reads the order and its product titles", async () => {
@@ -152,13 +154,13 @@ describe("page components", () => {
   });
   it("search shows the results header, named department facets, price bands and paging", async () => {
     const result = {
-      hits: [{ catalogItemId: "i1", title: "Kettle", inStock: true, purchasable: true, categoryId: "cat-80c58ef626f7", categoryPath: ["Jewelry", "Rings"] }],
+      items: [{ catalogItemId: "i1", title: "Kettle", inStock: true, purchasable: true, categoryId: "cat-80c58ef626f7", categoryPath: ["Jewelry", "Rings"] }],
       facets: [
         { name: "category", values: [{ value: "cat-80c58ef626f7", count: 1 }, { value: "cat-k", count: 2 }] },
         { name: "price-band", values: [{ value: "<2500", count: 1 }, { value: "bogus", count: 1 }] },
         { name: "in-stock", values: [{ value: "true", count: 2 }, { value: "false", count: 1 }] },
       ],
-      next: "cur",
+      nextCursor: "cur",
     };
     const tree = { version: 1, categories: [{ categoryId: "cat-k", name: "Kitchen & Dining", path: "/k", purchasableCount: 2 }] };
     mount(Search, { params: { q: "pen", priceMax: 2499, limit: 24 }, offset: 0, result }, { categories: tree, destination: null });
@@ -169,10 +171,10 @@ describe("page components", () => {
     expect(screen.getByRole("link", { name: "Under $25 (1)" })).toHaveClass("is-active");
     expect(screen.getByRole("link", { name: "‹ Any Price" })).toHaveAttribute("href", "/search?q=pen");
     expect(screen.getByRole("checkbox", { name: "In stock only" })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("link", { name: "Next page" })).toHaveAttribute("href", expect.stringContaining("after=cur"));
+    expect(screen.getByRole("link", { name: "Next page" })).toHaveAttribute("href", expect.stringContaining("cursor=cur"));
   });
   it("search says when nothing matched in a department", async () => {
-    mount(Search, { params: { categoryId: "cat-k", inStock: true, limit: 24 }, offset: 0, result: { hits: [], facets: [] } });
+    mount(Search, { params: { categoryId: "cat-k", inStock: true, limit: 24 }, offset: 0, result: { items: [], facets: [] } });
     expect(await screen.findByText(/No products matched/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "‹ Any Department" })).toHaveAttribute("href", "/search?inStock=true");
   });

@@ -36,7 +36,7 @@ export async function currentCart(): Promise<Cart | null> {
   if (!hasShopperSession()) return null;
   try {
     const res = await listCarts("OPEN");
-    const first = (res.items ?? res.carts ?? [])[0];
+    const first = (res.items ?? [])[0];
     if (first) {
       rememberCartId(first.cartId);
       return first;
