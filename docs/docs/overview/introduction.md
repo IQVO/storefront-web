@@ -62,3 +62,7 @@ The warehouse-docs storefront section classifies the six storefront bounded cont
 - Gates and tests: [Testing](../development/testing.md).
 - The BFF routes it calls and what happens when they fail: [Integration](../ecosystem/integration.md).
 - Why it is built this way: the [ADR index](/docs/adr).
+
+:::note[Disclaimer]
+This project is a domain-driven design study. It is not associated with, endorsed by or affiliated with any company, and it uses no company's code, data, logos or trademarks. All names, figures and examples are illustrative or synthetic.
+:::
