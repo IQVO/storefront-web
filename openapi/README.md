@@ -14,3 +14,7 @@ npm run gen:api
 
 CI (`npm run check:api`) regenerates from the snapshot and fails on drift,
 so a hand-edited generated file or a stale one never lands on develop.
+
+## Disclaimer
+
+This project is a domain-driven design study. It is not associated with, endorsed by or affiliated with any company, and it uses no company's code, data, logos or trademarks. All names, figures and examples are illustrative or synthetic.
