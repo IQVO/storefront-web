@@ -4,7 +4,7 @@ import type { Route } from "./+types/checkout";
 import { PaymentFields } from "~/components/PaymentFields.tsx";
 import { useRenewedActionId } from "~/lib/action-id.ts";
 import { guarded, formString, type ActionResult } from "~/lib/action-result.ts";
-import { ApiError } from "~/lib/api.ts";
+import { optional } from "~/lib/api.ts";
 import { announceCartChanged } from "~/lib/cart-events.ts";
 import { currentCart, forgetCartId, lineCount } from "~/lib/cart-session.ts";
 import { outcomeMessage, reviewGroups } from "~/lib/checkout.ts";
@@ -25,18 +25,15 @@ export async function clientLoader() {
   let session: CheckoutSession | null = null;
   const remembered = rememberedSession();
   if (remembered) {
-    session = await getCheckout(remembered).catch((e: unknown) => {
-      if (e instanceof ApiError && e.status === 404) return null;
-      throw e;
-    });
+    session = await optional(getCheckout(remembered));
     if (session && session.state !== "OPEN" && session.state !== "DECLINED") session = null;
   }
   // The session's cart carries the quote whose promised windows the review shows.
-  const cart: Cart | null = session ? await getCart(session.cartId).catch(() => null) : await currentCart();
+  const cart: Cart | null = session ? await optional(getCart(session.cartId)) : await currentCart();
   if (!session && (!cart || !cart.checkoutReadiness?.ready)) throw redirect("/cart");
   const products: Record<string, ProductView | null> = {};
   const ids = new Set([...(cart?.lines ?? []), ...(session?.lines ?? [])].map((l) => l.catalogItemId));
-  await Promise.all([...ids].map(async (id) => (products[id] = await getProduct(id).catch(() => null))));
+  await Promise.all([...ids].map(async (id) => (products[id] = await optional(getProduct(id)))));
   return { shopper, session, cart, products };
 }
 

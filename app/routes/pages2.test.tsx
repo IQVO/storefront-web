@@ -57,12 +57,14 @@ describe("client loaders", () => {
     vi.mocked(q.getMe).mockResolvedValueOnce(shopper);
     expect(await run(accountLoader)).toEqual({ shopper });
   });
-  it("cart loader fetches product details and the tier charges for the destination, tolerating failures", async () => {
+  it("cart loader fetches product details and the tier charges for the destination, tolerating only 404s", async () => {
     vi.mocked(cartSession.currentCart).mockResolvedValue(readyCart);
     vi.mocked(q.getProduct).mockRejectedValue(err(404));
     vi.mocked(q.quoteDeliveryDates).mockRejectedValue(err(503));
-    expect(await run(cartLoader)).toEqual({ cart: readyCart, products: { i1: null }, schedule: null });
+    await expect(run(cartLoader)).rejects.toBeInstanceOf(ApiError);
     expect(q.quoteDeliveryDates).toHaveBeenCalledWith("i1", "787");
+    vi.mocked(q.quoteDeliveryDates).mockRejectedValue(err(404));
+    expect(await run(cartLoader)).toEqual({ cart: readyCart, products: { i1: null }, schedule: null });
     vi.mocked(cartSession.currentCart).mockResolvedValue(null);
     expect(await run(cartLoader)).toEqual({ cart: null, products: {}, schedule: null });
   });
