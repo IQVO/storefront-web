@@ -160,7 +160,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a cart line
-         * @description Relays shopping-cart DELETE /carts/{cartId}/lines/{catalogItemId}. An Idempotency-Key is optional and ignored.
+         * @description Relays shopping-cart DELETE /carts/{cartId}/lines/{catalogItemId}. No Idempotency-Key is required; when the page sends a valid one it is forwarded upstream minted like any command key (and Idempotency-Replayed may be set). A malformed one is not checked here.
          */
         delete: operations["removeCartLine"];
         options?: never;
@@ -182,7 +182,7 @@ export interface paths {
         get?: never;
         /**
          * Set the destination postal prefix
-         * @description Relays shopping-cart PUT /carts/{cartId}/destination. Clears the current delivery quote. An Idempotency-Key is optional and ignored.
+         * @description Relays shopping-cart PUT /carts/{cartId}/destination. Clears the current delivery quote. No Idempotency-Key is required; when the page sends a valid one it is forwarded upstream minted like any command key (and Idempotency-Replayed may be set). A malformed one is not checked here.
          */
         put: operations["setCartDestination"];
         post?: never;
@@ -222,7 +222,7 @@ export interface paths {
         get?: never;
         /**
          * Select a delivery offer for a shipment group
-         * @description Relays shopping-cart PUT /carts/{cartId}/delivery-selection. An Idempotency-Key is optional and ignored.
+         * @description Relays shopping-cart PUT /carts/{cartId}/delivery-selection. No Idempotency-Key is required; when the page sends a valid one it is forwarded upstream minted like any command key (and Idempotency-Replayed may be set). A malformed one is not checked here.
          */
         put: operations["selectCartDelivery"];
         post?: never;
@@ -383,7 +383,7 @@ export interface paths {
         put?: never;
         /**
          * Start a session by e-mail lookup
-         * @description Looks the shopper up with customer-ordering GET /shoppers?email=. There is no password and no authentication; the cookie only remembers which shopper the page acts for. A POST, so it requires an Idempotency-Key; the lookup is a read upstream, so it is never replayed.
+         * @description Looks the shopper up with customer-ordering GET /shoppers?email=. There is no password and no authentication; the cookie only remembers which shopper the page acts for. A POST, so it requires an Idempotency-Key; the lookup is a GET upstream, so no upstream key is forwarded and in practice the answer never carries Idempotency-Replayed and never answers 409 (both are declared only because the fleet REST guideline requires them on every keyed POST). Without a body of {email} (at most 254 characters, no other field) the answer is 422 validation-failed.
          */
         post: operations["createSession"];
         delete?: never;
@@ -472,7 +472,7 @@ export interface components {
             detail?: string;
         };
         DeliveryDatesRequest: {
-            /** @description A postal prefix, never a full address. */
+            /** @description A postal prefix, never a full address. Letters, digits, space and hyphen only, not blank; anything else answers 422 validation-failed. */
             postalPrefix: string;
         };
         DeliveryDates: {
@@ -490,7 +490,7 @@ export interface components {
                  */
                 timeZone?: string;
                 /** Format: date-time */
-                offerExpiresAt?: string;
+                offerExpiresAt: string;
                 charge?: components["schemas"]["Passthrough"];
                 freeOver?: components["schemas"]["Passthrough"];
             }[];
@@ -510,7 +510,6 @@ export interface components {
             reason: string;
         };
         CreateSessionRequest: {
-            /** Format: email */
             email: string;
         };
     };
@@ -534,7 +533,7 @@ export interface components {
                 "application/json": components["schemas"]["Passthrough"];
             };
         };
-        /** @description A 400 problem: idempotency-key-required, idempotency-key-invalid, unknown-query-parameter, invalid-limit, invalid-cursor (relayed from the provider) or malformed-request. */
+        /** @description A 400 problem: idempotency-key-required, idempotency-key-invalid, unknown-query-parameter, invalid-limit, invalid-cursor (relayed from the provider) or malformed-request (a NUL character in the query string or body, or an unreadable body). */
         BadRequest: {
             headers: {
                 [name: string]: unknown;
@@ -552,7 +551,16 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description An RFC 9457 problem. Upstream problems are relayed unchanged; the edge adds validation-failed, session-required, malformed-request, payload-too-large, upstream-unavailable (503), gateway-timeout (504), route-not-allowed (500) and internal-error (500). */
+        /** @description A 413 payload-too-large problem from the edge: the request body is over 1 MiB (checked before any upstream call). */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description An RFC 9457 problem. Upstream problems are relayed unchanged; the edge adds validation-failed, session-required, malformed-request, payload-too-large, upstream-unavailable (503), gateway-timeout (504), route-not-allowed (500), internal-error (500) and client-closed-request (499, the caller went away). Any route also answers 404 resource-not-found for a path it does not serve (or one containing NUL) and 405 method-not-allowed for a wrong method. */
         Problem: {
             headers: {
                 [name: string]: unknown;
@@ -563,20 +571,20 @@ export interface components {
         };
     };
     parameters: {
-        /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+        /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
         Id: string;
-        /** @description A catalogue item id. */
+        /** @description A catalogue item id (same shape as the id parameter; malformed answers 422 validation-failed). */
         Item: string;
         /** @description The page's key for one user submit: a fresh crypto.randomUUID() per submit, reused on retry. The BFF forwards to the upstream command a key minted from (route, subject, this key); the provider replays a retry and answers 409 idempotency-key-reused when the same key carries a different request. Missing: 400 idempotency-key-required; longer than 128 characters or not visible ASCII: 400 idempotency-key-invalid. */
         IdempotencyKey: string;
-        /** @description Page size (default 100). Relayed; the provider may enforce a lower bound of its own. */
+        /** @description Page size (default 100). Validated at the edge (an integer 1-500, present once and non-empty, else 400 invalid-limit) and relayed. */
         Limit: number;
         /** @description The opaque nextCursor of the previous page, relayed to the provider unchanged (400 invalid-cursor from the provider when it is not one of its tokens). */
         Cursor: string;
     };
     requestBodies: never;
     headers: {
-        /** @description The sf_state cookie (HttpOnly, SameSite=Lax, path /api/storefront). State, not authentication. */
+        /** @description The sf_state cookie (HttpOnly, SameSite=Lax, path /api/storefront, Max-Age 30 days, Secure when COOKIE_SECURE is set). State, not authentication. */
         SetCookie: string;
         /** @description Present, with the value true, only when the answer is a replay of a stored one (any upstream write hop of the composition was replayed). */
         IdempotencyReplayed: "true";
@@ -594,7 +602,7 @@ export interface operations {
                 priceMin?: number;
                 priceMax?: number;
                 sort?: "relevance" | "price-asc" | "price-desc" | "title";
-                /** @description Page size (default 100). Relayed; the provider may enforce a lower bound of its own. */
+                /** @description Page size (default 100). Validated at the edge (an integer 1-500, present once and non-empty, else 400 invalid-limit) and relayed. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The opaque nextCursor of the previous page, relayed to the provider unchanged (400 invalid-cursor from the provider when it is not one of its tokens). */
                 cursor?: components["parameters"]["Cursor"];
@@ -639,7 +647,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -648,6 +656,7 @@ export interface operations {
         responses: {
             200: components["responses"]["Json"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
         };
@@ -660,7 +669,7 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -683,6 +692,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -693,7 +703,7 @@ export interface operations {
             query?: {
                 shopperId?: string;
                 state?: string;
-                /** @description Page size (default 100). Relayed; the provider may enforce a lower bound of its own. */
+                /** @description Page size (default 100). Validated at the edge (an integer 1-500, present once and non-empty, else 400 invalid-limit) and relayed. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The opaque nextCursor of the previous page, relayed to the provider unchanged (400 invalid-cursor from the provider when it is not one of its tokens). */
                 cursor?: components["parameters"]["Cursor"];
@@ -748,6 +758,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -758,7 +769,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -767,6 +778,7 @@ export interface operations {
         responses: {
             200: components["responses"]["Json"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
         };
@@ -779,7 +791,7 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -794,6 +806,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -804,18 +817,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
-                /** @description A catalogue item id. */
+                /** @description A catalogue item id (same shape as the id parameter; malformed answers 422 validation-failed). */
                 item: components["parameters"]["Item"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            200: components["responses"]["Json"];
+            200: components["responses"]["JsonCommand"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
         };
@@ -828,9 +842,9 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
-                /** @description A catalogue item id. */
+                /** @description A catalogue item id (same shape as the id parameter; malformed answers 422 validation-failed). */
                 item: components["parameters"]["Item"];
             };
             cookie?: never;
@@ -845,6 +859,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -855,7 +870,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -866,9 +881,11 @@ export interface operations {
             };
         };
         responses: {
-            200: components["responses"]["Json"];
+            200: components["responses"]["JsonCommand"];
+            400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -882,7 +899,7 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -903,7 +920,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -914,9 +931,11 @@ export interface operations {
             };
         };
         responses: {
-            200: components["responses"]["Json"];
+            200: components["responses"]["JsonCommand"];
+            400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -951,6 +970,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -961,7 +981,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -970,6 +990,7 @@ export interface operations {
         responses: {
             200: components["responses"]["Json"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
         };
@@ -982,7 +1003,7 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -998,6 +1019,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -1007,7 +1029,7 @@ export interface operations {
         parameters: {
             query?: {
                 shopperId?: string;
-                /** @description Page size (default 100). Relayed; the provider may enforce a lower bound of its own. */
+                /** @description Page size (default 100). Validated at the edge (an integer 1-500, present once and non-empty, else 400 invalid-limit) and relayed. */
                 limit?: components["parameters"]["Limit"];
                 /** @description The opaque nextCursor of the previous page, relayed to the provider unchanged (400 invalid-cursor from the provider when it is not one of its tokens). */
                 cursor?: components["parameters"]["Cursor"];
@@ -1039,7 +1061,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -1048,6 +1070,7 @@ export interface operations {
         responses: {
             200: components["responses"]["Json"];
             404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
         };
@@ -1060,7 +1083,7 @@ export interface operations {
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                /** @description An upstream resource id (letters, digits, dot, underscore, dash; at most 128 characters). */
+                /** @description An upstream resource id (letters, digits, dot, underscore, dash; the first character a letter or digit; at most 128 characters). A malformed id answers 422 validation-failed before any upstream call. */
                 id: components["parameters"]["Id"];
             };
             cookie?: never;
@@ -1075,6 +1098,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -1109,6 +1133,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -1144,6 +1169,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
@@ -1185,6 +1211,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             404: components["responses"]["Problem"];
             409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
             504: components["responses"]["Problem"];
