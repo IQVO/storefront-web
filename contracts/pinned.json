@@ -1,0 +1,11 @@
+{
+  "_doc": "Every contract copy this repo pins from a producer, and the producer branch it must equal. scripts/harness/pinned_contract_gate.py fails when a copy differs from the producer's develop. Refresh = copy the file (git show origin/develop:apis/openapi.yaml), then npm run gen:api, never edit it.",
+  "pins": [
+    {
+      "local": "openapi/storefront-bff.yaml",
+      "repo": "IQVO/storefront-bff",
+      "path": "apis/openapi.yaml",
+      "ref": "develop"
+    }
+  ]
+}
