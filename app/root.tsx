@@ -3,7 +3,7 @@ import type { Route } from "./+types/root";
 import appCss from "./app.css?url";
 import { SessionProvider } from "./components/Session.tsx";
 import { SiteHeader } from "./components/SiteHeader.tsx";
-import { ApiError } from "./lib/api.ts";
+import { ApiError, optional } from "./lib/api.ts";
 import { serverOpts } from "./lib/api.server.ts";
 import { departments } from "./lib/departments.ts";
 import { readDestination } from "./lib/destination.ts";
@@ -18,7 +18,7 @@ export const meta: Route.MetaFunction = () => [{ title: "Sample Storefront" }];
  * category tree is optional: a BFF that does not serve it yet (404) or fails leaves the bar with "All".
  */
 export async function loader({ request }: Route.LoaderArgs) {
-  const categories = await listCategories(serverOpts(request)).catch(() => null);
+  const categories = await optional(listCategories(serverOpts(request)));
   return { categories, destination: readDestination(request.headers.get("cookie")) };
 }
 

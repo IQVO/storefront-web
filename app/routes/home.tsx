@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { ProductCard } from "~/components/ProductCard.tsx";
 import { serverOpts } from "~/lib/api.server.ts";
+import { optional } from "~/lib/api.ts";
 import { departments, illustrationFor } from "~/lib/departments.ts";
 import { listCategories, searchProducts } from "~/lib/queries.ts";
 import type { ProductHit } from "~/lib/types.ts";
@@ -22,7 +23,7 @@ interface Row {
  */
 export async function loader({ request }: Route.LoaderArgs) {
   const opts = serverOpts(request);
-  const depts = departments(await listCategories(opts).catch(() => null));
+  const depts = departments(await optional(listCategories(opts)));
   let rows: Row[];
   if (depts.length > 0) {
     const busiest = [...depts].sort((a, b) => b.purchasableCount - a.purchasableCount).slice(0, ROWS);

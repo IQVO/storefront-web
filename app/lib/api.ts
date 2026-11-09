@@ -23,6 +23,8 @@ export interface CallOptions {
   body?: unknown;
   idempotencyKey?: string;
   signal?: AbortSignal;
+  /** Deadline for the whole call; defaults to DEFAULT_TIMEOUT_MS. */
+  timeoutMs?: number;
   /** Server-side rendering only: an absolute base plus the forwarded cookie. */
   base?: string;
   cookie?: string;
@@ -44,7 +46,16 @@ function parseProblem(text: string): Problem | null {
   }
 }
 
-/** One BFF call. Throws ApiError carrying the RFC 9457 problem on any non-2xx answer. */
+/** Default deadline for one BFF call: no page may hang on a stuck upstream. */
+export const DEFAULT_TIMEOUT_MS = 10_000;
+
+/**
+ * One BFF call. Throws ApiError carrying the RFC 9457 problem on any non-2xx answer.
+ * Every call has a deadline (DEFAULT_TIMEOUT_MS, or o.timeoutMs): when it passes the
+ * fetch aborts and the promise rejects with a TimeoutError DOMException, so a stuck
+ * upstream surfaces instead of pinning the loader forever. A caller's o.signal is
+ * combined with the deadline — whichever fires first wins.
+ */
 export async function callRaw<T>(path: string, o: CallOptions = {}): Promise<CallResult<T>> {
   const headers: Record<string, string> = { Accept: "application/json, application/problem+json" };
   if (o.body !== undefined) headers["Content-Type"] = "application/json";
@@ -55,7 +66,8 @@ export async function callRaw<T>(path: string, o: CallOptions = {}): Promise<Cal
   const doFetch = o.fetchImpl ?? fetch;
   const init: RequestInit = { method, headers, credentials: "same-origin" };
   if (o.body !== undefined) init.body = JSON.stringify(o.body);
-  if (o.signal) init.signal = o.signal;
+  const deadline = AbortSignal.timeout(o.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  init.signal = o.signal ? AbortSignal.any([o.signal, deadline]) : deadline;
   const res = await doFetch(`${o.base ?? API_BASE}${path}`, init);
   const text = await res.text();
   if (!res.ok) {
@@ -70,6 +82,20 @@ export async function callRaw<T>(path: string, o: CallOptions = {}): Promise<Cal
 
 export async function call<T>(path: string, o: CallOptions = {}): Promise<T> {
   return (await callRaw<T>(path, o)).data;
+}
+
+/**
+ * Enrichment calls (a product card, a category tree a BFF may not serve yet) tolerate a
+ * 404 and resolve null. Everything else — a timed-out call, a 5xx, a network failure —
+ * propagates: loaders must surface real errors, not silently render a degraded page.
+ */
+export async function optional<T>(p: Promise<T>): Promise<T | null> {
+  try {
+    return await p;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
 }
 
 /** Path segment for an upstream id: encoded, so an id can never alter the route. */

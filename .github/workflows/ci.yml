@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   # Agent-guide sensor (harness-template v3): skills load, references resolve, context budget.
@@ -37,6 +41,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run check:api
       - run: npm run test:coverage
       - run: npm run build
 
@@ -46,6 +51,22 @@ jobs:
   # Pull requests into develop: BLOCKING for every .ts/.tsx file the PR adds or
   # touches, so an oversized legacy file is split the next time it changes.
   # Release PRs, push and schedule: informational report of the backlog.
+  # The BFF snapshot under openapi/ is a COPY of storefront-bff's contract. `check:api` proves the generated
+  # types match the snapshot, not that the snapshot matches the BFF: this job does (exit 2 = producer unreadable).
+  pinned-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Pins equal the producer's develop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/harness/pinned_contract_gate.py
+      - name: The gate's own tests
+        run: python3 scripts/harness/test_pinned_contract_gate.py
+
   file-length:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -191,7 +212,7 @@ jobs:
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with:
           version: v3.16.4
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.13"
       - name: Install PyYAML (hash-pinned)

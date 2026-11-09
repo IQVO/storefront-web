@@ -73,4 +73,11 @@ describe("SSR loaders", () => {
     vi.mocked(q.getProduct).mockRejectedValue(new ApiError(503, null));
     await expect(productLoader({ request: req("/products/x"), params: { id: "x" } } as ProductRoute.LoaderArgs)).rejects.toBeInstanceOf(ApiError);
   });
+
+  it("root and home surface a failing /categories (not just tolerate its 404)", async () => {
+    vi.mocked(q.listCategories).mockRejectedValue(new ApiError(503, null));
+    await expect(rootLoader({ request: req("/") } as RootRoute.LoaderArgs)).rejects.toBeInstanceOf(ApiError);
+    vi.mocked(q.searchProducts).mockResolvedValue({ items: [], facets: [] });
+    await expect(homeLoader({ request: req("/") } as HomeRoute.LoaderArgs)).rejects.toBeInstanceOf(ApiError);
+  });
 });
