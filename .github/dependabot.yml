@@ -8,6 +8,17 @@ updates:
     groups:
       react-router:
         patterns: ["react-router", "@react-router/*"]
+    ignore:
+      # 2026-11-10: hold typescript at 6.x (IQVO/storefront-web#35 closed).
+      # Blocker is upstream: typescript-eslint 8.72.2 (latest; canary
+      # 8.72.3-alpha.3 too) peers typescript ">=4.8.4 <6.1.0", so `npm ci`
+      # fails ERESOLVE, and when forced its index.js throws "typescript-eslint
+      # does not support TS 7.0." (TS 7.0 ships no programmatic compiler API;
+      # planned for 7.1). Tracking: typescript-eslint/typescript-eslint#10940.
+      # tsc 7.0.2 itself typechecks and builds this repo clean. Remove this
+      # entry once a typescript-eslint release accepts typescript 7.x.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
