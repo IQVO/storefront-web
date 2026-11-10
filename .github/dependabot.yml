@@ -19,6 +19,13 @@ updates:
       # entry once a typescript-eslint release accepts typescript 7.x.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # 2026-11-10: hold openapi-typescript at 6.x (IQVO/storefront-web#44 closed).
+      # Blocker is upstream: openapi-typescript 7.13.0 (latest) peers typescript
+      # "^5.x", and this repo is on typescript 6, so `npm ci` fails ERESOLVE.
+      # Remove this entry once an openapi-typescript 7.x release peers
+      # typescript 6 (check: npm view openapi-typescript@latest peerDependencies).
+      - dependency-name: "openapi-typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
