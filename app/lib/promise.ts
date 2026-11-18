@@ -6,6 +6,7 @@ export const TIER_LABEL: Record<Tier, string> = {
   NEXT_DAY: "Next-Day Delivery",
   TWO_DAY: "Two-Day Delivery",
   STANDARD: "Standard Delivery",
+  CONSOLIDATED: "Consolidated Delivery",
 };
 
 export const tierLabel = (t: string): string => TIER_LABEL[t as Tier] ?? t;

@@ -33,6 +33,13 @@ export interface paths {
      */
     post: operations["quoteProductDeliveryDates"];
   };
+  "/delivery-estimates": {
+    /**
+     * Advisory delivery estimates for the items of a listing page
+     * @description Called by the browser for a product listing (search results): one call for up to 50 items, each catalogItemId once, each with a quantity of 1 to 999. Relays delivery-promise POST /delivery-estimates for the postal prefix and returns its answer unchanged: one estimate per item in request order, with the best option per classic tier (SAME_DAY, NEXT_DAY, TWO_DAY, STANDARD) or the constraint that blocks the tier. The BFF never requests the CONSOLIDATED tier here (the request has no tiers field). An estimate is ADVISORY: it is not an offer, carries no offer id, cannot back a promise and reserves no capacity; the quote of the product page or of checkout is what the shopper promises against. The estimate window is {start, end, timeZone}, which a quote calls {earliest, latest, timeZone}. It is a safe POST: nothing is stored here or upstream, so no Idempotency-Key is required and one that is sent is ignored (delivery-promise ADR 0019, BFF ADR 0007). An invalid request answers 422 validation-failed before any upstream call; an upstream problem is relayed unchanged.
+     */
+    post: operations["estimateDeliveries"];
+  };
   "/carts": {
     /**
      * List carts of a shopper
@@ -211,7 +218,7 @@ export interface components {
       postalPrefix: string;
       tiers: ({
           /** @enum {string} */
-          tier: "SAME_DAY" | "NEXT_DAY" | "TWO_DAY" | "STANDARD";
+          tier: "SAME_DAY" | "NEXT_DAY" | "TWO_DAY" | "STANDARD" | "CONSOLIDATED";
           /** Format: date-time */
           deliverByEarliest: string;
           /** Format: date-time */
@@ -225,8 +232,85 @@ export interface components {
           offerExpiresAt: string;
           charge?: components["schemas"]["Passthrough"];
           freeOver?: components["schemas"]["Passthrough"];
+          capacityBand?: components["schemas"]["CapacityBand"];
+          /** @description Present only on the CONSOLIDATED tier (delivery-promise ADR 0024), relayed as quoted: true when the chosen delivery day leaves the network at least one local day after the fastest feasible window to merge the order with others, false when the day is that window itself. The BFF does not request the CONSOLIDATED tier yet (BFF ADR 0007); a tier of that name appears only when delivery-promise returns it. */
+          consolidationEligible?: boolean;
         })[];
       unavailable: components["schemas"]["Passthrough"][];
+    };
+    /**
+     * @description The capacity pressure on the delivery-promise book of the offer's or option's chosen window when it was quoted or estimated (delivery-promise ADR 0023): AMPLE below 0.60 utilisation, TIGHT from 0.60 to below 0.85, SCARCE from 0.85. A signal only: it changes no offer, window or charge, reserves nothing, and is omitted when the producer has no reading.
+     * @enum {string}
+     */
+    CapacityBand: "AMPLE" | "TIGHT" | "SCARCE";
+    DeliveryEstimatesRequest: {
+      /** @description A postal prefix, never a full address. Letters, digits, space and hyphen only, not blank; anything else answers 422 validation-failed. */
+      postalPrefix: string;
+      /** @description The items of one listing view; each catalogItemId appears once. More than 50, none, or a duplicate answers 422 validation-failed. */
+      items: {
+          catalogItemId: string;
+          quantity: number;
+        }[];
+    };
+    /** @description Advisory estimates relayed from delivery-promise; nothing was stored and no capacity is reserved. */
+    DeliveryEstimates: {
+      /**
+       * Format: date-time
+       * @description The instant every estimate of the response was computed at.
+       */
+      computedAt: string;
+      destinationPostalPrefix: string;
+      /** @description One per requested item, in request order. */
+      estimates: components["schemas"]["DeliveryEstimate"][];
+    };
+    DeliveryEstimate: {
+      catalogItemId: string;
+      quantity: number;
+      /** @description The best option per classic tier that has one, ordered by tier. */
+      options: components["schemas"]["DeliveryEstimateOption"][];
+      /** @description The item-wide constraints first (no tier), then one per blocked tier, ordered by tier. */
+      constraints: components["schemas"]["DeliveryEstimateConstraint"][];
+    };
+    DeliveryEstimateOption: {
+      /** @enum {string} */
+      tier: "SAME_DAY" | "NEXT_DAY" | "TWO_DAY" | "STANDARD";
+      window: components["schemas"]["DeliveryEstimateWindow"];
+      /**
+       * @description How the window was derived (delivery-promise basis).
+       * @enum {string}
+       */
+      basis: "SCHEDULED" | "MEASURED" | "NOMINAL";
+      /** @description The calibrated probability that the window is kept; absent means unknown, never zero. */
+      confidence?: number;
+      /**
+       * Format: date-time
+       * @description The latest instant an order can be placed and still make this window; omitted when unknown.
+       */
+      orderByAt?: string;
+      capacityBand?: components["schemas"]["CapacityBand"];
+      /** @description True when the final leg is the chosen carrier of a carrier-handoff area; omitted otherwise. */
+      carrierArea?: boolean;
+    };
+    /** @description The option's window as two instants (RFC 3339 UTC) and the local calendar they belong to. start and end are what a quote's offer calls window.earliest and window.latest (the product page's deliverByEarliest and deliverByLatest); convert both into timeZone before taking their date. */
+    DeliveryEstimateWindow: {
+      /** Format: date-time */
+      start: string;
+      /** Format: date-time */
+      end: string;
+      /**
+       * @description IANA time zone of the delivery station serving the destination.
+       * @example America/Chicago
+       */
+      timeZone: string;
+    };
+    DeliveryEstimateConstraint: {
+      /**
+       * @description Omitted when the constraint holds for the item on every tier alike.
+       * @enum {string}
+       */
+      tier?: "SAME_DAY" | "NEXT_DAY" | "TWO_DAY" | "STANDARD";
+      /** @enum {string} */
+      code: "DESTINATION_NOT_SERVED" | "ITEM_QUANTITY_NOT_AVAILABLE" | "DELIVERY_SLA_UNAVAILABLE" | "NODE_CAPACITY_EXHAUSTED" | "PAST_ORDER_DEADLINE";
     };
     OpenCheckoutRequest: {
       /** @description Defaults to the cookie's cart. */
@@ -293,6 +377,8 @@ export interface components {
     Item: string;
     /** @description The page's key for one user submit: a fresh crypto.randomUUID() per submit, reused on retry. The BFF forwards to the upstream command a key minted from (route, subject, this key); the provider replays a retry and answers 409 idempotency-key-reused when the same key carries a different request. Missing: 400 idempotency-key-required; longer than 128 characters or not visible ASCII: 400 idempotency-key-invalid. */
     IdempotencyKey: string;
+    /** @description Not required. The operation stores nothing, so a key that is sent is ignored: it is never read, stored, forwarded or replayed. */
+    OptionalIdempotencyKey?: string;
     /** @description Page size (default 100). Validated at the edge (an integer 1-500, present once and non-empty, else 400 invalid-limit) and relayed. */
     Limit?: number;
     /** @description The opaque nextCursor of the previous page, relayed to the provider unchanged (400 invalid-cursor from the provider when it is not one of its tokens). */
@@ -304,6 +390,8 @@ export interface components {
     SetCookie: string;
     /** @description Present, with the value true, only when the answer is a replay of a stored one (any upstream write hop of the composition was replayed). */
     IdempotencyReplayed: "true";
+    /** @description Never set on this operation. An Idempotency-Key is ignored, so no answer is a replay. Declared because the fleet REST lint requires the header on every POST 2xx. */
+    NeverReplayed: "true";
   };
   pathItems: never;
 }
@@ -403,6 +491,44 @@ export interface operations {
       };
       400: components["responses"]["BadRequest"];
       409: components["responses"]["Conflict"];
+      413: components["responses"]["PayloadTooLarge"];
+      422: components["responses"]["Problem"];
+      503: components["responses"]["Problem"];
+      504: components["responses"]["Problem"];
+    };
+  };
+  /**
+   * Advisory delivery estimates for the items of a listing page
+   * @description Called by the browser for a product listing (search results): one call for up to 50 items, each catalogItemId once, each with a quantity of 1 to 999. Relays delivery-promise POST /delivery-estimates for the postal prefix and returns its answer unchanged: one estimate per item in request order, with the best option per classic tier (SAME_DAY, NEXT_DAY, TWO_DAY, STANDARD) or the constraint that blocks the tier. The BFF never requests the CONSOLIDATED tier here (the request has no tiers field). An estimate is ADVISORY: it is not an offer, carries no offer id, cannot back a promise and reserves no capacity; the quote of the product page or of checkout is what the shopper promises against. The estimate window is {start, end, timeZone}, which a quote calls {earliest, latest, timeZone}. It is a safe POST: nothing is stored here or upstream, so no Idempotency-Key is required and one that is sent is ignored (delivery-promise ADR 0019, BFF ADR 0007). An invalid request answers 422 validation-failed before any upstream call; an upstream problem is relayed unchanged.
+   */
+  estimateDeliveries: {
+    parameters: {
+      header?: {
+        "Idempotency-Key"?: components["parameters"]["OptionalIdempotencyKey"];
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeliveryEstimatesRequest"];
+      };
+    };
+    responses: {
+      /** @description One advisory estimate per requested item, in request order. Nothing was stored and no capacity is reserved; the options can change before the shopper quotes. */
+      200: {
+        headers: {
+          "Idempotency-Replayed": components["headers"]["NeverReplayed"];
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryEstimates"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      /** @description Never answered by this operation (a key is ignored, so it is never idempotency-key-reused); declared because the fleet REST lint requires a 409 on every POST. */
+      409: {
+        content: {
+          "application/problem+json": components["schemas"]["Problem"];
+        };
+      };
       413: components["responses"]["PayloadTooLarge"];
       422: components["responses"]["Problem"];
       503: components["responses"]["Problem"];
