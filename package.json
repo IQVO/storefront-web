@@ -32,7 +32,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@lhci/cli": "0.16.1",
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@react-router/dev": "8.5.2",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
